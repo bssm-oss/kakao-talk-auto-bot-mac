@@ -6,6 +6,7 @@ class KatalkAx < Formula
   version "0.1.0"
 
   depends_on :macos
+  depends_on arch: :arm64
 
   def install
     bin.install "katalk-ax"

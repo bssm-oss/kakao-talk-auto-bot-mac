@@ -45,7 +45,7 @@ It does **not** use:
 
 ## Requirements
 
-- macOS 14+
+- macOS 14+ on Apple Silicon (arm64)
 - Swift 5.9+ (tested here with Swift 6.2)
 - `KakaoTalk.app` installed on the same Mac
 - KakaoTalk already logged in and unlocked
@@ -118,6 +118,8 @@ swift run katalk-ax-menu-bar
 ```
 
 The menu bar app uses a left-click popover for the main workflow and a right-click utility menu for refresh, settings, and quit. It calls `KTalkAXService` directly instead of shelling out to the CLI.
+
+Current release artifacts are Apple Silicon only. Intel Macs are not supported by the published DMG or Homebrew install path in this repository.
 
 Run the MCP server over stdio:
 
@@ -450,9 +452,11 @@ Notes:
 - The cask points at the latest GitHub release DMG.
 - The current repository already publishes that DMG path through the live GitHub release flow.
 - Update the formula version and SHA when publishing a new CLI archive release.
+- Both the formula archive and the DMG currently target Apple Silicon (arm64) only.
 
 ## Known limitations
 
+- Published release artifacts are Apple Silicon only.
 - KakaoTalk’s Accessibility tree can change between versions.
 - Some controls may not expose writable AX values, which forces pasteboard or keyboard fallback.
 - Post-send verification is conservative and may fail closed when transcript evidence is incomplete.

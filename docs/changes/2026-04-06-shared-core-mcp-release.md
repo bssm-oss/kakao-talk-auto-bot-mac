@@ -32,4 +32,5 @@ Keep one reusable automation core while adding additional access surfaces and pr
 
 ## Remaining limits
 
+- Published release artifacts currently target Apple Silicon (arm64) only.
 - The release workflow currently builds unsigned assets; signing/notarization secrets and steps can be layered on when available.
