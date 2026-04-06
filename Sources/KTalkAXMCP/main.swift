@@ -27,7 +27,7 @@ struct KTalkAXMCPMain {
                 "protocolVersion": .string("2024-11-05"),
                 "serverInfo": .object([
                     "name": .string("katalk-ax-mcp"),
-                    "version": .string("0.1.0")
+                    "version": .string("0.1.1")
                 ]),
                 "capabilities": .object([
                     "tools": .object([:])

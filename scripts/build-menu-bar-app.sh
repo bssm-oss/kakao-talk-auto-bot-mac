@@ -7,8 +7,19 @@ BUILD_DIR="$ROOT_DIR/.build/arm64-apple-macosx/${CONFIGURATION}"
 APP_NAME="katalk-ax.app"
 APP_DIR="$ROOT_DIR/dist/$APP_NAME"
 EXECUTABLE_NAME="katalk-ax-menu-bar"
+ICON_NAME="katalk-ax.icns"
+
+mkdir -p "$ROOT_DIR/dist"
+
+ICON_WORK_DIR="$(mktemp -d "$ROOT_DIR/dist/menu-bar-icons.XXXXXX")"
+ICONSET_DIR="$ICON_WORK_DIR/katalk-ax.iconset"
+
+trap 'rm -rf "$ICON_WORK_DIR"' EXIT
 
 swift build -c "$CONFIGURATION" --product "$EXECUTABLE_NAME"
+mkdir -p "$ICONSET_DIR"
+swift "$ROOT_DIR/scripts/generate-app-iconset.swift" --output-dir "$ICONSET_DIR"
+iconutil -c icns "$ICONSET_DIR" -o "$ICON_WORK_DIR/$ICON_NAME"
 
 rm -rf "$APP_DIR"
 mkdir -p "$APP_DIR/Contents/MacOS"
@@ -16,8 +27,11 @@ mkdir -p "$APP_DIR/Contents/Resources"
 
 cp "$BUILD_DIR/$EXECUTABLE_NAME" "$APP_DIR/Contents/MacOS/$EXECUTABLE_NAME"
 cp "$ROOT_DIR/packaging/macos/Info.plist" "$APP_DIR/Contents/Info.plist"
+cp "$ICON_WORK_DIR/$ICON_NAME" "$APP_DIR/Contents/Resources/$ICON_NAME"
 
-plutil -replace CFBundleShortVersionString -string "${KATALK_AX_VERSION:-0.1.0}" "$APP_DIR/Contents/Info.plist"
+plutil -replace CFBundleShortVersionString -string "${KATALK_AX_VERSION:-0.1.1}" "$APP_DIR/Contents/Info.plist"
 plutil -replace CFBundleVersion -string "${KATALK_AX_BUILD_NUMBER:-1}" "$APP_DIR/Contents/Info.plist"
+
+codesign --force --deep --sign - "$APP_DIR"
 
 echo "$APP_DIR"
