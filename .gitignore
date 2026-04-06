@@ -1,0 +1,13 @@
+.build/
+dist/
+.sisyphus/
+
+# macOS noise
+.DS_Store
+
+# Local editor noise
+.idea/
+.vscode/
+
+# Runtime files
+*.log

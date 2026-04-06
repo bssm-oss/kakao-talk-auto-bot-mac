@@ -1,0 +1,15 @@
+{
+  "providers": [
+    {
+      "provider": "gemini",
+      "model": "gemini-1.5-flash",
+      "apiKey": "paste-your-gemini-key-here"
+    },
+    {
+      "provider": "openai-compatible",
+      "model": "gpt-4.1-mini",
+      "baseURL": "https://api.openai.com/v1",
+      "authToken": "paste-your-openai-compatible-token-here"
+    }
+  ]
+}
