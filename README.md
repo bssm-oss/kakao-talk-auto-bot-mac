@@ -432,7 +432,7 @@ The release workflow is intentionally unsigned by default. If you add Developer 
 
 This repo includes Homebrew tap artifacts at the repository root:
 
-- `Formula/katalk-ax.rb` for the CLI and MCP binaries from the repository source
+- `Formula/katalk-ax.rb` for the released CLI and MCP archive
 - `Casks/katalk-ax-menu-bar.rb` for the latest DMG-installed AppKit app release
 
 Recommended install flow:
@@ -448,7 +448,7 @@ Notes:
 - The custom tap URL is required because the repository is not named with Homebrew's default `homebrew-<tap>` convention.
 - The formula installs the released CLI archive directly, so it does not require a local Xcode build.
 - The cask points at the latest GitHub release DMG.
-- This repository is release-ready for that cask path, but the actual GitHub release publication is an external final step.
+- The current repository already publishes that DMG path through the live GitHub release flow.
 - Update the formula version and SHA when publishing a new CLI archive release.
 
 ## Known limitations
