@@ -438,17 +438,18 @@ This repo includes Homebrew tap artifacts at the repository root:
 Recommended install flow:
 
 ```bash
-brew tap <your-org>/<your-tap>
-brew install --HEAD katalk-ax
-brew install --cask katalk-ax-menu-bar
+brew tap bssm-oss/kakao-talk-auto-bot-mac https://github.com/bssm-oss/kakao-talk-auto-bot-mac
+brew install bssm-oss/kakao-talk-auto-bot-mac/katalk-ax
+brew install --cask bssm-oss/kakao-talk-auto-bot-mac/katalk-ax-menu-bar
 ```
 
 Notes:
 
-- The formula is concrete and source-builds the CLI and MCP binaries from the repository.
+- The custom tap URL is required because the repository is not named with Homebrew's default `homebrew-<tap>` convention.
+- The formula installs the released CLI archive directly, so it does not require a local Xcode build.
 - The cask points at the latest GitHub release DMG.
 - This repository is release-ready for that cask path, but the actual GitHub release publication is an external final step.
-- If you later want a stable versioned formula, publish tagged archives and replace the `head` formula with a tagged `url` + `sha256` formula in your tap.
+- Update the formula version and SHA when publishing a new CLI archive release.
 
 ## Known limitations
 

@@ -1,16 +1,15 @@
 class KatalkAx < Formula
   desc "KakaoTalk macOS Accessibility CLI automation tool"
   homepage "https://github.com/bssm-oss/kakao-talk-auto-bot-mac"
-  head "https://github.com/bssm-oss/kakao-talk-auto-bot-mac.git", branch: "main"
+  url "https://github.com/bssm-oss/kakao-talk-auto-bot-mac/releases/download/v0.1.0/katalk-ax-cli.tar.gz"
+  sha256 "d31ec0e554f34cbd9170c34033df03a92d1e042f34c0a59b95c6ceb9d17bd5a7"
+  version "0.1.0"
 
   depends_on :macos
-  depends_on xcode: ["14.0", :build]
 
   def install
-    system "swift", "build", "-c", "release", "--product", "katalk-ax"
-    system "swift", "build", "-c", "release", "--product", "katalk-ax-mcp"
-    bin.install ".build/release/katalk-ax"
-    bin.install ".build/release/katalk-ax-mcp"
+    bin.install "katalk-ax"
+    bin.install "katalk-ax-mcp"
   end
 
   test do
