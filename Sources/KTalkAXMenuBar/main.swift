@@ -1,0 +1,3 @@
+import KTalkAXMenuBarApp
+
+KTalkAXMenuBarLauncher.run()
