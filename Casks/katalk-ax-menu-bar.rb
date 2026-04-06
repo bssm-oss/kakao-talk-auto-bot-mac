@@ -11,4 +11,8 @@ cask "katalk-ax-menu-bar" do
 
   app "katalk-ax.app"
   binary "katalk-ax.app/Contents/MacOS/katalk-ax-menu-bar", target: "katalk-ax-menu-bar"
+
+  postflight do
+    system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{appdir}/katalk-ax.app"]
+  end
 end
