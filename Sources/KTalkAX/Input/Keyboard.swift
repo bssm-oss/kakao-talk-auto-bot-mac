@@ -15,11 +15,11 @@ enum Keyboard {
 
     static func press(_ key: Key, modifiers: CGEventFlags = []) throws {
         guard let source = CGEventSource(stateID: .combinedSessionState) else {
-            throw KTalkAXError.sendFailed("Failed to create keyboard event source.")
+            throw KTalkAXError.sendFailed("키보드 이벤트 소스를 만들지 못했습니다.")
         }
         guard let keyDown = CGEvent(keyboardEventSource: source, virtualKey: key.rawValue, keyDown: true),
               let keyUp = CGEvent(keyboardEventSource: source, virtualKey: key.rawValue, keyDown: false) else {
-            throw KTalkAXError.sendFailed("Failed to create keyboard events.")
+            throw KTalkAXError.sendFailed("키보드 이벤트를 만들지 못했습니다.")
         }
         keyDown.flags = modifiers
         keyUp.flags = modifiers
@@ -51,7 +51,7 @@ enum Keyboard {
 
     static func type(text: String) throws {
         guard let source = CGEventSource(stateID: .combinedSessionState) else {
-            throw KTalkAXError.sendFailed("Failed to create keyboard event source.")
+            throw KTalkAXError.sendFailed("키보드 이벤트 소스를 만들지 못했습니다.")
         }
         for scalar in text.unicodeScalars {
             var utf16 = Array(String(scalar).utf16)

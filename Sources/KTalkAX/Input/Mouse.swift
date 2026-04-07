@@ -15,7 +15,7 @@ enum Mouse {
         guard let move = CGEvent(mouseEventSource: nil, mouseType: .mouseMoved, mouseCursorPosition: point, mouseButton: .left),
               let down = CGEvent(mouseEventSource: nil, mouseType: .leftMouseDown, mouseCursorPosition: point, mouseButton: .left),
               let up = CGEvent(mouseEventSource: nil, mouseType: .leftMouseUp, mouseCursorPosition: point, mouseButton: .left) else {
-            throw KTalkAXError.sendFailed("Failed to create mouse events.")
+            throw KTalkAXError.sendFailed("마우스 이벤트를 만들지 못했습니다.")
         }
         for count in 1...clickCount {
             move.post(tap: .cghidEventTap)

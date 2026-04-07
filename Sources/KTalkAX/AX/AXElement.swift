@@ -137,19 +137,19 @@ struct AXElement: Hashable {
         guard error != .success else { return }
         switch error {
         case .attributeUnsupported, .actionUnsupported:
-            throw KTalkAXError.unsupported("Accessibility does not support \(context) on this element.")
+            throw KTalkAXError.unsupported("이 요소는 접근성 API에서 \(context)을(를) 지원하지 않습니다.")
         case .cannotComplete:
-            throw KTalkAXError.cannotComplete("Accessibility could not complete \(context).")
+            throw KTalkAXError.cannotComplete("접근성 API가 \(context)을(를) 완료하지 못했습니다.")
         case .notImplemented:
-            throw KTalkAXError.unsupported("Accessibility API is not implemented for \(context).")
+            throw KTalkAXError.unsupported("접근성 API에서 \(context)이(가) 구현되어 있지 않습니다.")
         case .invalidUIElement, .invalidUIElementObserver:
-            throw KTalkAXError.invalidUI("Invalid accessibility element while accessing \(context).")
+            throw KTalkAXError.invalidUI("\(context)에 접근하는 중 잘못된 접근성 요소를 만났습니다.")
         case .apiDisabled:
             throw KTalkAXError.notTrusted(prompted: false)
         case .noValue:
-            throw KTalkAXError.noValue("Accessibility has no value for \(context).")
+            throw KTalkAXError.noValue("접근성 API에 \(context) 값이 없습니다.")
         default:
-            throw KTalkAXError.generic("Accessibility error \(error.rawValue) while accessing \(context).")
+            throw KTalkAXError.generic("\(context)에 접근하는 중 접근성 오류 \(error.rawValue)가 발생했습니다.")
         }
     }
 }

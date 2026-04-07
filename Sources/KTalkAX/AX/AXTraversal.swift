@@ -48,7 +48,7 @@ enum AXTraversal {
 
         while !frontier.isEmpty {
             if Date() > deadline {
-                throw KTalkAXError.timeout("Timed out while traversing accessibility tree.")
+                throw KTalkAXError.timeout("접근성 트리를 순회하는 중 시간이 초과되었습니다.")
             }
             if results.count >= maxNodes { break }
 
