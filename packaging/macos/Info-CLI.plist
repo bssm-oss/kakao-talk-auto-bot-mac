@@ -5,11 +5,9 @@
     <key>CFBundleDevelopmentRegion</key>
     <string>en</string>
     <key>CFBundleExecutable</key>
-    <string>katalk-ax-menu-bar</string>
-    <key>CFBundleIdentifier</key>
-    <string>org.bssm.katalk-ax</string>
-    <key>CFBundleIconFile</key>
     <string>katalk-ax</string>
+    <key>CFBundleIdentifier</key>
+    <string>org.bssm.katalk-ax.cli</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>
@@ -22,10 +20,8 @@
     <string>4</string>
     <key>LSMinimumSystemVersion</key>
     <string>14.0</string>
-    <key>LSUIElement</key>
-    <true/>
     <key>NSAccessibilityUsageDescription</key>
-    <string>katalk-ax needs Accessibility permission to interact with KakaoTalk using macOS Accessibility APIs. This allows the app to read UI elements, find chat rooms, and send messages programmatically without using any unofficial protocols or reverse engineering.</string>
+    <string>katalk-ax needs Accessibility permission to interact with KakaoTalk using macOS Accessibility APIs. This allows the tool to read UI elements, find chat rooms, and send messages programmatically without using any unofficial protocols or reverse engineering.</string>
     <key>NSPrincipalClass</key>
     <string>NSApplication</string>
 </dict>

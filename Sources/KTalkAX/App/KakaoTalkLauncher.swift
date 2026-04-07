@@ -25,7 +25,15 @@ final class KakaoTalkLauncher {
 
     func permissionState(prompt: Bool) -> PermissionState {
         let options = [trustedPromptKey: prompt] as CFDictionary
-        return PermissionState(trusted: AXIsProcessTrustedWithOptions(options), promptAttempted: prompt)
+        let trusted = AXIsProcessTrustedWithOptions(options)
+        
+        if !trusted {
+            logger.trace("AXIsProcessTrustedWithOptions returned false (prompt=\(prompt))")
+            logger.trace("Current process: \(Bundle.main.bundleIdentifier ?? "nil")")
+            logger.trace("Process path: \(Bundle.main.bundlePath)")
+        }
+        
+        return PermissionState(trusted: trusted, promptAttempted: prompt)
     }
 
     func prepare(promptForTrust: Bool) throws -> AppPreparation {

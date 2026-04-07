@@ -89,8 +89,20 @@ extension KTalkAXError {
              .loginRequired(let message),
              .locked(let message):
             return message
-        case .notTrusted:
-            return "현재 실행 중인 프로세스에 접근성 권한이 없습니다. 시스템 설정 > 개인정보 보호 및 보안 > 손쉬운 사용에서 권한을 켠 뒤 katalk-ax를 다시 실행하세요."
+        case .notTrusted(let prompted):
+            var message = "ACCESSIBILITY_PERMISSION_DENIED: 현재 실행 중인 프로세스에 접근성 권한이 없습니다.\n\n"
+            message += "해결 방법:\n"
+            message += "1. 시스템 설정 > 개인정보 보호 및 보안 > 손쉬운 사용으로 이동\n"
+            message += "2. 다음 중 하나를 추가하고 권한을 켜세요:\n"
+            message += "   - 터미널 앱 (Terminal.app, iTerm, Warp 등)\n"
+            message += "   - 또는 빌드된 앱 번들: dist/katalk-ax-cli.app\n"
+            message += "3. 앱을 재시작\n\n"
+            if prompted {
+                message += "시스템 권한 요청 대화상자가 표시되었어야 합니다. 표시되지 않았다면 Info.plist에 NSAccessibilityUsageDescription이 있는지 확인하세요."
+            } else {
+                message += "--prompt 옵션을 사용하면 시스템 권한 요청 대화상자를 표시할 수 있습니다: katalk-ax status --prompt"
+            }
+            return message
         case .ambiguousMatch(let query, let candidates):
             let names = candidates.prefix(5).map { "\($0.title) [\($0.chatID)] score=\($0.score)" }.joined(separator: ", ")
             return "채팅방 이름 '\(query)'이(가) 모호해서 메시지를 보내지 않았습니다. 후보: \(names)"

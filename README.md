@@ -53,14 +53,56 @@
 
 ## 접근성 권한 설정
 
-접근성 권한은 **실행 주체별**로 필요합니다. 예를 들어 Terminal, iTerm, Warp, Cursor, VS Code 통합 터미널 등에서 실행하면 그 주체 각각에 권한이 있어야 합니다.
+접근성 권한은 **실행 주체별**로 필요합니다. 다음 두 가지 방법 중 하나를 선택하세요.
+
+### 방법 1: 앱 번들 사용 (권장)
+
+앱 번들로 빌드하면 시스템이 권한 요청을 더 잘 감지합니다.
+
+```bash
+# CLI 앱 빌드
+scripts/build-cli-app.sh
+
+# 결과물: dist/katalk-ax-cli.app
+```
 
 1. **시스템 설정** 열기
 2. **개인정보 보호 및 보안 > 손쉬운 사용**으로 이동
-3. `katalk-ax`를 실행하는 앱/터미널에 권한 부여
+3. `dist/katalk-ax-cli.app`를 목록에 추가
+4. 권한 토글 켜기
+5. 앱 실행:
+
+```bash
+open dist/katalk-ax-cli.app
+# 또는 직접 실행
+./dist/katalk-ax-cli.app/Contents/MacOS/katalk-ax status
+```
+
+### 방법 2: 터미널 앱에 권한 부여
+
+`swift run`으로 직접 실행하는 경우, **터미널 앱 자체**에 권한이 필요합니다.
+
+1. **시스템 설정** 열기
+2. **개인정보 보호 및 보안 > 손쉬운 사용**으로 이동
+3. 사용하는 터미널 앱에 권한 부여 (Terminal.app, iTerm, Warp, Cursor 터미널 등)
 4. 필요하면 `katalk-ax status --prompt`로 권한 요청 흐름 다시 실행
 
 권한이 없으면 `katalk-ax`는 종료 코드 `2`로 끝납니다.
+
+### 문제 해결
+
+권한이 감지되지 않는 경우:
+
+```bash
+# 진단 스크립트 실행
+scripts/check-accessibility.sh
+
+# 일반적 해결 방법:
+# 1. 기존 항목을 접근성 목록에서 제거
+# 2. 앱 번들을 다시 추가
+# 3. 터미널 재시작
+# 4. katalk-ax status --prompt 실행
+```
 
 ## 빠른 시작
 
