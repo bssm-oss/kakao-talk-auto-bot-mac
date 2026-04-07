@@ -13,13 +13,13 @@ final class KakaoTalkChatMatcher {
             logger.score("title='\(candidate.title)' score=\(candidate.score) match=\(candidate.matchType)")
         }
         if decision.candidates.isEmpty {
-            throw KTalkAXError.chatNotFound("No accessible KakaoTalk chat matched '\(query)'.")
+            throw KTalkAXError.chatNotFound("'\(query)'에 해당하는 접근 가능한 KakaoTalk 채팅방을 찾지 못했습니다.")
         }
         if decision.ambiguous {
             throw KTalkAXError.ambiguousMatch(query, decision.candidates)
         }
         guard let selected = decision.selected else {
-            throw KTalkAXError.chatNotFound("No accessible KakaoTalk chat matched '\(query)'.")
+            throw KTalkAXError.chatNotFound("'\(query)'에 해당하는 접근 가능한 KakaoTalk 채팅방을 찾지 못했습니다.")
         }
         return selected
     }

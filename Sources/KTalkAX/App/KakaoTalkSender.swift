@@ -156,7 +156,7 @@ final class KakaoTalkSender {
             loginState: loginState,
             cachePath: cache.cacheURL.path,
             registryPath: registry.registryURL.path,
-            textDescription: "trusted=\(permission.trusted) running=\(running != nil) windows=\(windowCount) login_state=\(loginState) cache=\(cache.cacheURL.path) registry=\(registry.registryURL.path)"
+            textDescription: "접근성권한=\(permission.trusted) 실행중=\(running != nil) 창수=\(windowCount) 로그인상태=\(loginState) 캐시=\(cache.cacheURL.path) 레지스트리=\(registry.registryURL.path)"
         )
     }
 
@@ -166,7 +166,7 @@ final class KakaoTalkSender {
         let descriptor: WindowDescriptor
         if let windowIndex = options.windowIndex {
             guard let found = descriptors.first(where: { $0.index == windowIndex }) else {
-                throw KTalkAXError.invalidArguments("Window index \(windowIndex) does not exist.")
+                throw KTalkAXError.invalidArguments("창 인덱스 \(windowIndex)가 존재하지 않습니다.")
             }
             descriptor = found
         } else {
@@ -198,7 +198,7 @@ final class KakaoTalkSender {
             let entry = try registry.upsert(title: row.title, matchableTexts: row.matchableTexts, preferredChatID: row.chatID)
             return ChatSummaryResult(chatID: entry.chatID, title: row.title, sourceWindow: row.sourceWindow, matchableTexts: row.matchableTexts, unreadEstimate: row.unreadEstimate, metaEstimate: row.metaEstimate)
         }
-        let text = output.map { "\($0.chatID) | \($0.title) | source=\($0.sourceWindow) | texts=\($0.matchableTexts.joined(separator: ", "))" }.joined(separator: "\n")
+        let text = output.map { "\($0.chatID) | \($0.title) | 창=\($0.sourceWindow) | 후보문자열=\($0.matchableTexts.joined(separator: ", "))" }.joined(separator: "\n")
         return ChatsResult(ok: true, command: "chats", count: output.count, chats: output, textDescription: text)
     }
 
@@ -206,7 +206,7 @@ final class KakaoTalkSender {
         if options.refreshCache { try cache.reset() }
         let registryEntry = registry.find(byChatID: options.chatID)
         if options.chatID != nil && registryEntry == nil {
-            throw KTalkAXError.chatNotFound("No chat registry entry exists for chat id '\(options.chatID!)'. Run chats first to populate the registry.")
+            throw KTalkAXError.chatNotFound("chat id '\(options.chatID!)'에 해당하는 채팅방 레지스트리가 없습니다. 먼저 chats 명령으로 목록을 갱신하세요.")
         }
         let searchQuery: String = registryEntry?.title ?? options.chat ?? ""
         let requestedChat: String = options.chat ?? registryEntry?.title ?? ""
@@ -230,7 +230,7 @@ final class KakaoTalkSender {
         let searchMs = Int(Date().timeIntervalSince(searchStarted) * 1000)
 
         guard let matchedRow = rows.first(where: { $0.chatID == selected.chatID }) else {
-            throw KTalkAXError.chatNotFound("Matched row disappeared before opening the chat.")
+            throw KTalkAXError.chatNotFound("선택한 채팅 행이 사라져서 채팅방을 열 수 없습니다.")
         }
 
         if !options.noCache {
@@ -253,17 +253,42 @@ final class KakaoTalkSender {
                 if let titled = refreshedRows.first(where: { $0.title == matchedRow.title }) {
                     return titled
                 }
-                throw KTalkAXError.chatNotFound("Matched row disappeared before opening the chat.")
+                logger.trace("Matched row could not be re-resolved; falling back to the original row element.")
+                return matchedRow
             }
+            let attemptOpen: () throws -> Void = { [self] in
+                try self.launcher.activate(prepared.app)
+                Thread.sleep(forTimeInterval: 0.35)
+                if options.chatID == nil || storedSearch == nil {
+                    let currentListWindow = try self.windows.primaryListWindow(appElement: prepared.appElement)
+                    try self.searchUI.openVisibleRow(named: selected.title, in: currentListWindow.element)
+                } else {
+                    try self.searchUI.openRow(try resolveCurrentRow().rowElement)
+                }
+                Timeout.sleep(for: options.speed, base: 0.45)
+            }
+
             do {
-                try searchUI.openRow(try resolveCurrentRow().rowElement)
+                try attemptOpen()
             } catch {
                 try recovery.performRecoverySteps(launcher: launcher, currentApp: prepared.app, cache: cache, refreshCache: options.refreshCache, deepRecovery: options.deepRecovery)
-                try searchUI.openRow(try resolveCurrentRow().rowElement)
+                try attemptOpen()
             }
-            Timeout.sleep(for: options.speed, base: 0.45)
-            chatWindow = try Timeout.poll(label: "opened chat window", timeout: 8.0, interval: 0.4) {
-                try windows.chatWindow(appElement: prepared.appElement, expectedTitle: selected.title)
+
+            do {
+                chatWindow = try Timeout.poll(label: "opened chat window", timeout: 8.0, interval: 0.4) {
+                    try windows.chatWindow(appElement: prepared.appElement, expectedTitle: selected.title)
+                }
+            } catch {
+                logger.trace("First chat-window verification failed; retrying row open once more.")
+                try recovery.performRecoverySteps(launcher: launcher, currentApp: prepared.app, cache: cache, refreshCache: true, deepRecovery: options.deepRecovery)
+                try launcher.activate(prepared.app)
+                let currentListWindow = try windows.primaryListWindow(appElement: prepared.appElement)
+                try searchUI.openVisibleRow(named: selected.title, in: currentListWindow.element)
+                Timeout.sleep(for: options.speed, base: 0.45)
+                chatWindow = try Timeout.poll(label: "opened chat window", timeout: 8.0, interval: 0.4) {
+                    try windows.chatWindow(appElement: prepared.appElement, expectedTitle: selected.title)
+                }
             }
         }
         let openMs = Int(Date().timeIntervalSince(openStarted) * 1000)
@@ -278,10 +303,10 @@ final class KakaoTalkSender {
         }
 
         if options.confirm {
-            FileHandle.standardOutput.write(Data(("Send to: \(selected.title)\nMatch: \(selected.matchType) (score \(selected.score))\nMessage preview: \(String(options.message.prefix(200)))\nProceed? [y/N] ").utf8))
+            FileHandle.standardOutput.write(Data(("보낼 채팅방: \(selected.title)\n매칭 방식: \(selected.matchType) (점수 \(selected.score))\n메시지 미리보기: \(String(options.message.prefix(200)))\n계속할까요? [y/N] ").utf8))
             let response = readLine(strippingNewline: true)?.lowercased() ?? "n"
             guard response == "y" else {
-                throw KTalkAXError.sendFailed("Send aborted by user confirmation prompt.")
+                throw KTalkAXError.sendFailed("사용자 확인 단계에서 전송을 취소했습니다.")
             }
         }
 
@@ -305,7 +330,7 @@ final class KakaoTalkSender {
                 verified: true,
                 usedFallback: composeFallbacks,
                 timingsMS: SendTimings(launch: launchMs, search: searchMs, open: openMs, compose: composeMs, send: 0, verify: 0),
-                textDescription: "dry-run ready: chat='\(selected.title)' match=\(selected.matchType) score=\(selected.score) compose_fallbacks=\(composeFallbacks.joined(separator: ","))"
+                textDescription: "드라이런 준비 완료: 채팅방='\(selected.title)' 매칭=\(selected.matchType) 점수=\(selected.score) 입력대체=\(composeFallbacks.joined(separator: ","))"
             )
         }
 
@@ -319,7 +344,7 @@ final class KakaoTalkSender {
         let verifyMs = Int(Date().timeIntervalSince(verifyStarted) * 1000)
 
         guard verified else {
-            throw KTalkAXError.verificationFailed("Message send could not be verified from the compose field or transcript rows.")
+            throw KTalkAXError.verificationFailed("입력창 또는 대화 행을 기준으로 메시지 전송을 검증하지 못했습니다.")
         }
 
         _ = try registry.upsert(title: selected.title, matchableTexts: matchedRow.matchableTexts, preferredChatID: selected.chatID)
@@ -339,7 +364,7 @@ final class KakaoTalkSender {
             verified: true,
             usedFallback: usedFallbacks,
             timingsMS: SendTimings(launch: launchMs, search: searchMs, open: openMs, compose: composeMs, send: sendMs, verify: verifyMs),
-            textDescription: "sent chat='\(selected.title)' match=\(selected.matchType) score=\(selected.score) verified=true fallbacks=\(usedFallbacks.joined(separator: ","))"
+            textDescription: "전송 완료: 채팅방='\(selected.title)' 매칭=\(selected.matchType) 점수=\(selected.score) 검증=true 대체수단=\(usedFallbacks.joined(separator: ","))"
         )
     }
 

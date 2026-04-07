@@ -67,7 +67,7 @@ final class KakaoTalkWindows {
         if let only = descriptors.first, descriptors.count == 1 {
             return only
         }
-        throw KTalkAXError.invalidUI("Failed to find a KakaoTalk window that looks like the chat list.")
+        throw KTalkAXError.invalidUI("채팅 목록처럼 보이는 KakaoTalk 창을 찾지 못했습니다.")
     }
 
     func chatWindow(appElement: AXElement, expectedTitle: String) throws -> WindowDescriptor? {
@@ -77,8 +77,23 @@ final class KakaoTalkWindows {
             guard descriptor.isChatWindow else { return false }
             let normalizedTitle = TextNormalizer.normalize(descriptor.title)
             let strippedTitle = TextNormalizer.normalize(descriptor.title, stripSeparators: true)
-            return normalizedTitle == normalizedExpected || strippedTitle == strippedExpected
+            if normalizedTitle == normalizedExpected || strippedTitle == strippedExpected {
+                return true
+            }
+            return (try? windowContainsExpectedChatSignal(descriptor.element, normalizedExpected: normalizedExpected, strippedExpected: strippedExpected)) == true
         })
+    }
+
+    private func windowContainsExpectedChatSignal(_ window: AXElement, normalizedExpected: String, strippedExpected: String) throws -> Bool {
+        let nodes = try AXTraversal.collect(root: window, strategy: .breadthFirst, maxDepth: 5, maxNodes: 400, timeout: 3.0)
+        return nodes.contains { node in
+            let candidateTexts = [node.title, node.value, try? node.element.stringAttribute(AXAttributeNames.description)].compactMap { $0 }
+            return candidateTexts.contains { text in
+                let normalized = TextNormalizer.normalize(text)
+                let stripped = TextNormalizer.normalize(text, stripSeparators: true)
+                return normalized == normalizedExpected || stripped == strippedExpected
+            }
+        }
     }
 
     func close(window: AXElement) throws {

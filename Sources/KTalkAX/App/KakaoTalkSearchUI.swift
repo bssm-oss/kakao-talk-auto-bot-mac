@@ -28,10 +28,37 @@ final class KakaoTalkSearchUI {
             guard let frame = node.frame, let windowFrame = try? window.frame() else { return true }
             return frame.midY < windowFrame.midY
         }
-        guard let best = candidates.first else {
-            throw KTalkAXError.invalidUI("Search field not found. Run inspect to review the current AX tree.")
+        let bestNode = candidates.first ?? recursiveSearchField(from: window, depth: 0)
+        guard let best = bestNode else {
+            throw KTalkAXError.invalidUI("검색 입력창을 찾지 못했습니다. 현재 AX 트리를 확인하려면 inspect를 실행하세요.")
         }
         return (best.element, StoredAXPath(path: best.path, segments: KakaoTalkCache.capture(node: best).segments, capturedAt: Date()))
+    }
+
+    private func recursiveSearchField(from element: AXElement, depth: Int) -> AXTraversalNode? {
+        if depth > 6 { return nil }
+        let role = (try? element.role()) ?? ""
+        let subrole = (try? element.subrole()) ?? ""
+        if role == AXRoleNames.textField || role == AXRoleNames.textArea || subrole == "AXSearchField" {
+            return AXTraversalNode(
+                element: element,
+                depth: depth,
+                path: "recursive-search-field",
+                siblingIndex: 0,
+                frame: try? element.frame(),
+                role: try? element.role(),
+                subrole: try? element.subrole(),
+                title: try? element.title(),
+                value: try? element.valueAsString()
+            )
+        }
+        let children = (try? element.children()) ?? []
+        for child in children {
+            if let found = recursiveSearchField(from: child, depth: depth + 1) {
+                return found
+            }
+        }
+        return nil
     }
 
     func clearAndTypeSearch(_ query: String, field: AXElement) throws {
@@ -52,18 +79,78 @@ final class KakaoTalkSearchUI {
             logger.trace("Using cached result list path")
             return (cached, cache?.store.resultList)
         }
+        if let directTable = try directResultsContainer(in: window) {
+            return (directTable, nil)
+        }
         let nodes = try AXTraversal.collect(root: window, strategy: .breadthFirst, maxDepth: 6, maxNodes: 500)
         let candidates = nodes.filter { node in
             [AXRoleNames.table, AXRoleNames.outline, AXRoleNames.list, AXRoleNames.scrollArea, AXRoleNames.group].contains(node.role ?? "")
         }
-        let best = try candidates.first(where: { node in
+        let bestNode = try candidates.first(where: { node in
+            if let rows = try? node.element.elementsAttribute(AXAttributeNames.rows), !rows.isEmpty {
+                return true
+            }
+            if let rows = try? node.element.elementsAttribute(AXAttributeNames.visibleRows), !rows.isEmpty {
+                return true
+            }
             let descendants = try AXTraversal.collect(root: node.element, strategy: .breadthFirst, maxDepth: 3, maxNodes: 200)
             return descendants.contains(where: { $0.role == AXRoleNames.row })
         })
-        guard let best else {
-            throw KTalkAXError.invalidUI("Search results list was not found. Run inspect with --debug-layout for more detail.")
+        let bestElement = bestNode?.element ?? recursiveResultsContainer(from: window, depth: 0)
+        guard let bestElement else {
+            throw KTalkAXError.invalidUI("검색 결과 목록을 찾지 못했습니다. 더 자세한 구조를 보려면 --debug-layout과 함께 inspect를 실행하세요.")
         }
-        return (best.element, StoredAXPath(path: best.path, segments: KakaoTalkCache.capture(node: best).segments, capturedAt: Date()))
+        if let bestNode {
+            return (bestNode.element, StoredAXPath(path: bestNode.path, segments: KakaoTalkCache.capture(node: bestNode).segments, capturedAt: Date()))
+        }
+        return (bestElement, nil)
+    }
+
+    private func directResultsContainer(in window: AXElement) throws -> AXElement? {
+        let children = try window.children()
+        if let scrollArea = children.first(where: { (try? $0.role()) == AXRoleNames.scrollArea }),
+           let table = try scrollArea.children().first(where: {
+               let role = (try? $0.role()) ?? ""
+               guard [AXRoleNames.table, AXRoleNames.outline, AXRoleNames.list].contains(role) else { return false }
+               if let rows = try? $0.elementsAttribute(AXAttributeNames.rows), !rows.isEmpty { return true }
+               if let rows = try? $0.elementsAttribute(AXAttributeNames.visibleRows), !rows.isEmpty { return true }
+               return false
+           }) {
+            return table
+        }
+        return nil
+    }
+
+    private func recursiveResultsContainer(from element: AXElement, depth: Int) -> AXElement? {
+        if depth > 8 { return nil }
+        let role = (try? element.role()) ?? ""
+        if [AXRoleNames.table, AXRoleNames.outline, AXRoleNames.list, AXRoleNames.scrollArea, AXRoleNames.group].contains(role) {
+            if let rows = try? element.elementsAttribute(AXAttributeNames.rows), !rows.isEmpty {
+                return element
+            }
+            if let rows = try? element.elementsAttribute(AXAttributeNames.visibleRows), !rows.isEmpty {
+                return element
+            }
+        }
+
+        let children = (try? element.children()) ?? []
+        if [AXRoleNames.scrollArea, AXRoleNames.group].contains(role),
+           let nestedTable = children.first(where: {
+               let childRole = (try? $0.role()) ?? ""
+               guard [AXRoleNames.table, AXRoleNames.outline, AXRoleNames.list].contains(childRole) else { return false }
+               if let rows = try? $0.elementsAttribute(AXAttributeNames.rows), !rows.isEmpty { return true }
+               if let rows = try? $0.elementsAttribute(AXAttributeNames.visibleRows), !rows.isEmpty { return true }
+               return false
+           }) {
+            return nestedTable
+        }
+
+        for child in children {
+            if let found = recursiveResultsContainer(from: child, depth: depth + 1) {
+                return found
+            }
+        }
+        return nil
     }
 
     func collectRows(in container: AXElement, sourceWindow: String, registry: KakaoTalkRegistry) throws -> [ChatRowCandidate] {
@@ -99,6 +186,35 @@ final class KakaoTalkSearchUI {
         try Keyboard.enter()
     }
 
+    func openVisibleRow(named title: String, in window: AXElement) throws {
+        if let row = try findDirectTableRow(named: title, in: window) ?? findVisibleRow(named: title, in: window) {
+            if let frame = try row.frame() {
+                try Mouse.doubleClick(centerOf: frame)
+                Thread.sleep(forTimeInterval: 0.15)
+                try Keyboard.enter()
+                return
+            }
+            try AXActions.focus(row)
+            try Keyboard.enter()
+            return
+        }
+        throw KTalkAXError.chatNotFound("현재 보이는 목록에서 '\(title)' 채팅 행을 찾지 못했습니다.")
+    }
+
+    private func findDirectTableRow(named title: String, in window: AXElement) throws -> AXElement? {
+        let normalizedExpected = TextNormalizer.normalize(title)
+        let scrollArea = try window.children().first(where: { (try? $0.role()) == AXRoleNames.scrollArea })
+        let table = try scrollArea?.children().first(where: { (try? $0.role()) == AXRoleNames.table || (try? $0.role()) == AXRoleNames.outline || (try? $0.role()) == AXRoleNames.list })
+        let rows = (try? table?.elementsAttribute(AXAttributeNames.rows)) ?? []
+        for row in rows {
+            let texts = try directTexts(from: row)
+            if texts.contains(where: { TextNormalizer.normalize($0) == normalizedExpected }) {
+                return row
+            }
+        }
+        return nil
+    }
+
     func transcriptRows(in window: AXElement) throws -> [RowSummary] {
         let nodes = try AXTraversal.collect(root: window, strategy: .breadthFirst, maxDepth: 7, maxNodes: 800)
         return try nodes.filter { $0.role == AXRoleNames.row }.prefix(20).map { rowNode in
@@ -115,6 +231,27 @@ final class KakaoTalkSearchUI {
         }
         let descendants = try AXTraversal.collect(root: container, strategy: .breadthFirst, maxDepth: 4, maxNodes: 250)
         return descendants.filter { $0.role == AXRoleNames.row }.map(\.element)
+    }
+
+    private func findVisibleRow(named title: String, in window: AXElement) throws -> AXElement? {
+        let normalizedExpected = TextNormalizer.normalize(title)
+        let strippedExpected = TextNormalizer.normalize(title, stripSeparators: true)
+        let nodes = try AXTraversal.collect(root: window, strategy: .breadthFirst, maxDepth: 6, maxNodes: 500)
+        let containers = nodes.filter { [AXRoleNames.table, AXRoleNames.outline, AXRoleNames.list, AXRoleNames.scrollArea, AXRoleNames.group].contains($0.role ?? "") }
+        for container in containers {
+            let rows = (try? fetchRows(in: container.element)) ?? []
+            if let match = try rows.first(where: { row in
+                let texts = try extractTexts(from: row)
+                return texts.contains { text in
+                    let normalized = TextNormalizer.normalize(text)
+                    let stripped = TextNormalizer.normalize(text, stripSeparators: true)
+                    return normalized == normalizedExpected || stripped == strippedExpected
+                }
+            }) {
+                return match
+            }
+        }
+        return nil
     }
 
     private func extractTexts(from row: AXElement) throws -> [String] {
@@ -152,5 +289,20 @@ final class KakaoTalkSearchUI {
             buttonTitles: Array(Set(buttonTitles)).sorted(),
             path: rowNode.path
         )
+    }
+
+    private func directTexts(from element: AXElement, depth: Int = 0) throws -> [String] {
+        if depth > 3 { return [] }
+        var texts: [String] = []
+        if let title = try? element.title(), !title.isEmpty {
+            texts.append(title)
+        }
+        if let value = try? element.valueAsString(), !value.isEmpty {
+            texts.append(value)
+        }
+        for child in try element.children() {
+            texts.append(contentsOf: try directTexts(from: child, depth: depth + 1))
+        }
+        return texts
     }
 }

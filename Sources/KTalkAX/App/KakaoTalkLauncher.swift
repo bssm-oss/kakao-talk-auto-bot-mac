@@ -37,9 +37,16 @@ final class KakaoTalkLauncher {
         let running = try ensureRunningApplication()
         let element = AXElement.appElement(pid: running.processIdentifier)
         try activate(running)
-        _ = try Timeout.poll(label: "KakaoTalk window readiness", timeout: 10.0, interval: 0.4) {
-            let windows = try? element.windows()
-            return (windows?.isEmpty == false) ? true : nil
+        if (try? waitForWindowReadiness(element: element)) == nil {
+            logger.trace("Window readiness timed out; retrying with unhide and open fallback")
+            _ = running.unhide()
+            let fallback = Process()
+            fallback.executableURL = URL(fileURLWithPath: "/usr/bin/open")
+            fallback.arguments = ["-a", "KakaoTalk"]
+            try fallback.run()
+            fallback.waitUntilExit()
+            try activate(running)
+            try waitForWindowReadiness(element: element)
         }
         try assertLikelyLoggedIn(appElement: element)
         return AppPreparation(app: running, appElement: element, permission: permission)
@@ -56,7 +63,7 @@ final class KakaoTalkLauncher {
             return running
         }
         guard let appURL = locator.installedAppURL() else {
-            throw KTalkAXError.kakaoTalkNotAvailable("KakaoTalk.app is not installed or was not found in /Applications.")
+            throw KTalkAXError.kakaoTalkNotAvailable("KakaoTalk.app이 설치되어 있지 않거나 /Applications에서 찾을 수 없습니다.")
         }
         logger.info("Launching KakaoTalk from \(appURL.path)")
         let semaphore = DispatchSemaphore(value: 0)
@@ -68,7 +75,7 @@ final class KakaoTalkLauncher {
         }
         _ = semaphore.wait(timeout: .now() + 15)
         if let launchError = launchResult.error {
-            throw KTalkAXError.kakaoTalkNotAvailable("Failed to launch KakaoTalk.app: \(launchError.localizedDescription)")
+            throw KTalkAXError.kakaoTalkNotAvailable("KakaoTalk.app 실행에 실패했습니다: \(launchError.localizedDescription)")
         }
         if let running = try? Timeout.poll(label: "KakaoTalk process", timeout: 15.0, interval: 0.5, operation: {
             locator.locateRunningApp()?.runningApplication
@@ -88,18 +95,32 @@ final class KakaoTalkLauncher {
     }
 
     private func assertLikelyLoggedIn(appElement: AXElement) throws {
-        let windows = try appElement.windows()
+        var windows = try appElement.windows()
+        if windows.isEmpty, let focusedWindow = try appElement.focusedWindow() {
+            windows = [focusedWindow]
+        }
         if windows.isEmpty {
-            throw KTalkAXError.loginRequired("KakaoTalk did not expose any windows. Verify that it is logged in and unlocked.")
+            throw KTalkAXError.loginRequired("KakaoTalk 창을 찾지 못했습니다. 로그인되어 있고 잠금이 해제되어 있는지 확인하세요.")
         }
         let hints = try windows.prefix(3).flatMap { window in
             try AXTraversal.collect(root: window, strategy: .breadthFirst, maxDepth: 3, maxNodes: 120).compactMap { $0.title ?? $0.value }
         }
         if hints.contains(where: { $0.localizedCaseInsensitiveContains("login") || $0.contains("로그인") }) {
-            throw KTalkAXError.loginRequired("KakaoTalk appears to be on a login screen. Log in first.")
+            throw KTalkAXError.loginRequired("KakaoTalk이 로그인 화면에 있는 것 같습니다. 먼저 로그인하세요.")
         }
         if hints.contains(where: { $0.localizedCaseInsensitiveContains("lock") || $0.contains("잠금") }) {
-            throw KTalkAXError.locked("KakaoTalk appears to be locked. Unlock it before using katalk-ax.")
+            throw KTalkAXError.locked("KakaoTalk이 잠긴 상태인 것 같습니다. katalk-ax를 사용하기 전에 잠금을 해제하세요.")
+        }
+    }
+
+    private func waitForWindowReadiness(element: AXElement) throws {
+        _ = try Timeout.poll(label: "KakaoTalk window readiness", timeout: 10.0, interval: 0.4) {
+            let windows = try? element.windows()
+            if windows?.isEmpty == false {
+                return true
+            }
+            let focusedWindow = try? element.focusedWindow()
+            return focusedWindow == nil ? nil : true
         }
     }
 }

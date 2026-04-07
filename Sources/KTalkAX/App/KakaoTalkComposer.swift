@@ -22,7 +22,7 @@ final class KakaoTalkComposer {
             (lhs.frame?.midY ?? 0) > (rhs.frame?.midY ?? 0)
         }
         guard let best = sortedCandidates.first else {
-            throw KTalkAXError.composeFieldNotFound("Compose field was not found in the current chat window.")
+            throw KTalkAXError.composeFieldNotFound("현재 채팅창에서 메시지 입력창을 찾지 못했습니다.")
         }
         return (best.element, StoredAXPath(path: best.path, segments: KakaoTalkCache.capture(node: best).segments, capturedAt: Date()))
     }
