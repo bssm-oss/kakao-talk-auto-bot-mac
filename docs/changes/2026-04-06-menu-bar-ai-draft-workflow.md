@@ -1,40 +1,39 @@
-# 2026-04-06 menu bar AI draft workflow
+# 2026-04-06 메뉴 막대 AI 초안 흐름
 
-## Background
+## 배경
 
-The native AppKit menu bar app already handled status checks, visible chat loading, dry runs, and verified sends, while the shared core package already contained reusable AI provider support.
+네이티브 AppKit 메뉴 막대 앱은 이미 상태 확인, 채팅방 로딩, 드라이런, 검증 전송을 처리할 수 있었고, 공유 코어에는 재사용 가능한 AI 제공자 계층이 있었습니다.
 
-## Goal
+## 목표
 
-Expose a focused AI draft assist flow in the existing menu bar popover without changing the underlying KakaoTalk automation safety model.
+기존 KakaoTalk 자동화 안전 모델을 유지하면서 팝오버 안에서 사용할 수 있는 집중된 AI 초안/대화 흐름을 제공합니다.
 
-## What changed
+## 변경 내용
 
-- Added a small `AIDraftWorkflow` helper in `KTalkAXMenuBarApp` that reuses `AIComposerService` and provider configurations from `Sources/KTalkAX/AI/`
-- Added a popover-level AI prompt field plus `AI Draft` and `Rewrite with AI` actions that write back into the existing message compose box
-- Added settings support for choosing the default configured AI provider used by the popover workflow
-- Added inline feedback when no provider is configured, keeping the manual compose, Dry Run, and Send path available
-- Added unit coverage for AI prompt request building and AI provider preference persistence
-- Updated the README for the new menu bar AI draft behavior
+- `KTalkAXMenuBarApp`에 `AIDraftWorkflow` 보조 흐름 추가
+- 팝오버에 AI 입력 필드, `AI 초안`, `AI로 다듬기`, `AI에게 묻기`, `마지막 답변 적용` 흐름 추가
+- 기본 AI 제공자를 선택할 수 있도록 설정 창 연동 추가
+- 제공자가 없을 때도 수동 작성/드라이런/전송 경로를 막지 않도록 인라인 안내 추가
+- 관련 테스트와 README 설명 갱신
 
-## Design reasons
+## 설계 이유
 
-- AI stays optional and front-loaded: it only prepares or revises the message draft before the user explicitly chooses Dry Run or Send.
-- Provider selection lives in Settings so the main popover stays focused on chat selection, drafting, and send decisions.
-- Setup guidance points at the existing shared provider configuration file and environment variables instead of introducing app-specific auth flows.
+- AI는 항상 선택 사항이며, 실제 전송 전에 메시지 초안만 준비하거나 다듬도록 제한했습니다.
+- 제공자 선택은 설정 창에 두어 메인 팝오버가 채팅 선택과 전송 흐름에 집중되도록 했습니다.
+- 자격 증명은 기존 공유 설정 파일과 환경 변수를 그대로 사용합니다.
 
-## Impact
+## 영향
 
-- The menu bar app can now help generate or revise a KakaoTalk draft while preserving the current native AppKit workflow.
-- The existing shared AI provider layer is now exercised by both the core package and the native app shell.
+- 메뉴 막대 앱에서 특정 채팅방에 보낼 메시지를 AI와 상호작용하며 더 쉽게 준비할 수 있습니다.
+- 공유 AI 계층이 코어와 네이티브 앱 모두에서 사용됩니다.
 
-## Verification
+## 검증
 
 - `swift build`
 - `swift test`
-- `swift run katalk-ax status --json`
+- `swift run katalk-ax-menu-bar`
 
-## Remaining limits
+## 남아 있는 한계
 
-- The menu bar app still does not manage AI credentials directly; users must configure providers through the existing shared file or environment variables.
-- AI output is not auto-sent or auto-verified; users must still review the draft and explicitly choose Dry Run or Send.
+- AI 자격 증명은 앱 내부에서 직접 발급/관리하지 않습니다.
+- AI 결과는 자동 전송되지 않으며, 사용자가 직접 검토 후 드라이런 또는 전송을 눌러야 합니다.

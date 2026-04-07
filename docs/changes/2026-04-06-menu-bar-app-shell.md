@@ -1,40 +1,39 @@
-# 2026-04-06 menu bar app shell
+# 2026-04-06 메뉴 막대 앱 셸 추가
 
-## Background
+## 배경
 
-The package already had a shared `KTalkAXCore` library and a CLI executable, but no native macOS app shell for a menu-bar-first workflow.
+공유 `KTalkAXCore` 라이브러리와 CLI는 있었지만, 메뉴 막대 중심의 네이티브 macOS 앱 셸은 없었습니다.
 
-## Goal
+## 목표
 
-Add a buildable AppKit menu bar executable that reuses `KTalkAXService` directly for status, chat loading, dry-run, and verified send operations.
+`KTalkAXService`를 직접 재사용하는 AppKit 메뉴 막대 실행 파일을 추가해 상태 확인, 채팅방 로딩, 드라이런, 전송을 네이티브 UI에서 수행할 수 있게 합니다.
 
-## What changed
+## 변경 내용
 
-- Added a new `katalk-ax-menu-bar` executable target and a `KTalkAXMenuBarApp` AppKit support target in SwiftPM
-- Added a native `NSStatusItem` controller with a left-click popover and a right-click utility menu
-- Added a main popover workflow with automation status, visible chat list, message compose UI, dry-run/send actions, and inline feedback
-- Added a settings window stub with menu bar defaults for match mode, speed, and post-send window behavior
-- Added unit tests for compose validation and menu bar preference persistence
-- Updated README with build/run guidance for the new native app target
+- `katalk-ax-menu-bar` 실행 타깃과 `KTalkAXMenuBarApp` 지원 타깃 추가
+- 좌클릭 팝오버와 우클릭 유틸리티 메뉴를 가진 `NSStatusItem` 기반 UI 추가
+- 자동화 상태, 보이는 채팅방 목록, 메시지 작성, 드라이런/전송, 인라인 피드백이 포함된 메인 팝오버 추가
+- 매칭 방식, 속도, 전송 후 창 유지 여부 등을 다루는 설정 창 추가
+- 관련 메뉴 막대 테스트 추가
 
-## Design reasons
+## 설계 이유
 
-- The app shell stays thin and reuses the shared core through `KTalkAXService` instead of shelling out to the CLI.
-- The main workflow lives in a popover because the status item menu is too constrained for chat selection and compose actions.
-- Settings remain separate so the popover can stay focused on quick automation work.
+- 앱 셸은 CLI를 다시 호출하지 않고 `KTalkAXService`를 직접 사용합니다.
+- 채팅방 선택과 메시지 작성에는 팝오버가 일반 메뉴보다 적합합니다.
+- 설정은 별도 창으로 분리해 빠른 작업 흐름을 방해하지 않도록 했습니다.
 
-## Impact
+## 영향
 
-- The repository now contains both a CLI and a native AppKit menu bar executable.
-- Shared send safety, ambiguity blocking, and verification logic remain centralized in the core package.
+- 저장소에 CLI와 네이티브 AppKit 메뉴 막대 앱이 함께 존재하게 되었습니다.
+- 전송 안전성, ambiguous 차단, 검증 로직은 공유 코어에 그대로 유지됩니다.
 
-## Verification
+## 검증
 
 - `swift build`
 - `swift test`
-- `swift run katalk-ax status --json`
+- `swift run katalk-ax-menu-bar`
 
-## Remaining limits
+## 남아 있는 한계
 
-- The menu bar app does not yet persist full window state or recent drafts.
-- Real KakaoTalk UI drift can still affect both the CLI and the new app because they share the same Accessibility heuristics.
+- 최근 입력 초안이나 창 상태를 완전히 복원하지는 않습니다.
+- 접근성 휴리스틱은 CLI와 앱이 공유하므로, KakaoTalk UI 변화의 영향을 함께 받습니다.
