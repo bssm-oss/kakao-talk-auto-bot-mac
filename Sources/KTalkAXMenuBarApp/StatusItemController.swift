@@ -1,18 +1,6 @@
 import AppKit
 import Foundation
 
-struct MenuBarStatusItemAppearance {
-    let symbolName: String
-    let tintColor: NSColor
-    let tooltip: String
-
-    static let idle = MenuBarStatusItemAppearance(
-        symbolName: "ellipsis.message",
-        tintColor: .labelColor,
-        tooltip: "katalk-ax menu bar"
-    )
-}
-
 @MainActor
 final class StatusItemController: NSObject, NSPopoverDelegate {
     var onRefreshRequested: (() -> Void)?
@@ -26,17 +14,17 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
 
     private lazy var utilityMenu: NSMenu = {
         let menu = NSMenu()
-        let refreshItem = NSMenuItem(title: "Refresh Status", action: #selector(handleRefresh), keyEquivalent: "r")
+        let refreshItem = NSMenuItem(title: "상태 새로고침", action: #selector(handleRefresh), keyEquivalent: "r")
         refreshItem.target = self
         menu.addItem(refreshItem)
 
-        let settingsItem = NSMenuItem(title: "Settings…", action: #selector(handleOpenSettings), keyEquivalent: ",")
+        let settingsItem = NSMenuItem(title: "설정…", action: #selector(handleOpenSettings), keyEquivalent: ",")
         settingsItem.target = self
         menu.addItem(settingsItem)
 
         menu.addItem(.separator())
 
-        let quitItem = NSMenuItem(title: "Quit katalk-ax", action: #selector(handleQuit), keyEquivalent: "q")
+        let quitItem = NSMenuItem(title: "katalk-ax 종료", action: #selector(handleQuit), keyEquivalent: "q")
         quitItem.target = self
         menu.addItem(quitItem)
         return menu
@@ -54,13 +42,10 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
 
     func apply(appearance: MenuBarStatusItemAppearance) {
         guard let button = statusItem.button else { return }
-        let configuration = NSImage.SymbolConfiguration(pointSize: 15, weight: .medium)
-        let image = NSImage(systemSymbolName: appearance.symbolName, accessibilityDescription: "katalk-ax menu bar")?
-            .withSymbolConfiguration(configuration)
-        image?.isTemplate = true
+        let image = MenuBarStatusItemIconFactory.image(for: appearance)
         button.image = image
         button.imagePosition = .imageOnly
-        button.contentTintColor = appearance.tintColor
+        button.contentTintColor = nil
         button.toolTip = appearance.tooltip
         button.setAccessibilityLabel(appearance.tooltip)
     }

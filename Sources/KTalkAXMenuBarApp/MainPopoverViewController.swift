@@ -45,30 +45,31 @@ final class MainPopoverViewController: NSViewController, NSTableViewDataSource, 
         }
     }
 
-    private let headerTitleLabel = NSTextField(labelWithString: "KakaoTalk Automation")
+    private let headerTitleLabel = NSTextField(labelWithString: "카카오톡 자동화")
     private let statusIconView = NSImageView()
-    private let statusHeadlineLabel = NSTextField(labelWithString: "Checking KakaoTalk status…")
-    private let statusDetailLabel = NSTextField(labelWithString: "The menu bar app uses the shared KTalkAXService directly.")
+    private let statusHeadlineLabel = NSTextField(labelWithString: "카카오톡 상태를 확인하는 중…")
+    private let statusDetailLabel = NSTextField(labelWithString: "메뉴 막대 앱은 공유된 KTalkAXService를 직접 사용합니다.")
     private let refreshButton = NSButton(title: "", target: nil, action: nil)
-    private let requestAccessButton = NSButton(title: "Prompt Access", target: nil, action: nil)
+    private let requestAccessButton = NSButton(title: "권한 요청", target: nil, action: nil)
     private let progressIndicator = NSProgressIndicator()
-    private let chatCountLabel = NSTextField(labelWithString: "Visible chats")
-    private let emptyStateLabel = NSTextField(labelWithString: "No visible chats loaded yet.")
-    private let selectionLabel = NSTextField(labelWithString: "Select a visible KakaoTalk chat to enable Dry Run and Send.")
-    private let preferencesLabel = NSTextField(labelWithString: "")
+    private let chatCountLabel = NSTextField(labelWithString: "보이는 채팅방")
+    private let roomNameLabel = NSTextField(labelWithString: "채팅방")
+    private let roomNameField = NSTextField(string: "")
+    private let messageLabel = NSTextField(labelWithString: "메시지")
+    private let emptyStateLabel = NSTextField(labelWithString: "아직 불러온 채팅방이 없습니다.")
+    private let selectionLabel = NSTextField(labelWithString: "채팅방 이름을 직접 입력하거나, 아래 목록에서 선택할 수 있습니다.")
     private let aiProviderLabel = NSTextField(labelWithString: "")
     private let feedbackLabel = NSTextField(labelWithString: "")
     private let chatsTableView = NSTableView()
     private let aiConversationTextView = NSTextView(frame: .zero)
     private let aiPromptField = NSTextField(string: "")
     private let messageTextView = NSTextView(frame: .zero)
-    private let aiAskButton = NSButton(title: "Ask AI", target: nil, action: nil)
-    private let aiUseReplyButton = NSButton(title: "Use Last Reply", target: nil, action: nil)
-    private let aiDraftButton = NSButton(title: "AI Draft", target: nil, action: nil)
-    private let aiRewriteButton = NSButton(title: "Rewrite with AI", target: nil, action: nil)
-    private let dryRunButton = NSButton(title: "Dry Run", target: nil, action: nil)
-    private let sendButton = NSButton(title: "Send", target: nil, action: nil)
-    private let settingsButton = NSButton(title: "Settings…", target: nil, action: nil)
+    private let aiAskButton = NSButton(title: "AI에게 묻기", target: nil, action: nil)
+    private let aiUseReplyButton = NSButton(title: "마지막 답변 적용", target: nil, action: nil)
+    private let aiDraftButton = NSButton(title: "AI 초안", target: nil, action: nil)
+    private let aiRewriteButton = NSButton(title: "AI로 다듬기", target: nil, action: nil)
+    private let dryRunButton = NSButton(title: "드라이런", target: nil, action: nil)
+    private let sendButton = NSButton(title: "전송", target: nil, action: nil)
 
     init(service: KTalkAXService, preferences: AppPreferences, aiDraftWorkflow: AIDraftWorkflow) {
         self.service = service
@@ -111,8 +112,8 @@ final class MainPopoverViewController: NSViewController, NSTableViewDataSource, 
         reloadAIProviders()
         updateSelectionSummary()
         updateEmptyStateVisibility()
-        applyFeedback("Choose a visible KakaoTalk chat, write a message, then use Dry Run or Send.", kind: .info)
-        updateStatusSummary(headline: "Checking KakaoTalk status…", detail: "Open the popover to refresh status and visible chats.", tint: .secondaryLabelColor)
+        applyFeedback("보이는 카카오톡 채팅방을 고르고 메시지를 작성한 뒤 드라이런 또는 전송을 사용하세요.", kind: .info)
+        updateStatusSummary(headline: "카카오톡 상태를 확인하는 중…", detail: "팝오버를 열어 상태와 보이는 채팅방 목록을 새로고침하세요.", tint: .secondaryLabelColor)
         updateUIState()
         publishStatusAppearance()
     }
@@ -150,10 +151,8 @@ final class MainPopoverViewController: NSViewController, NSTableViewDataSource, 
         selectionLabel.lineBreakMode = .byWordWrapping
         selectionLabel.maximumNumberOfLines = 2
 
-        preferencesLabel.font = .systemFont(ofSize: 11)
-        preferencesLabel.textColor = .secondaryLabelColor
-        preferencesLabel.lineBreakMode = .byWordWrapping
-        preferencesLabel.maximumNumberOfLines = 2
+        roomNameLabel.font = .systemFont(ofSize: 12, weight: .semibold)
+        messageLabel.font = .systemFont(ofSize: 12, weight: .semibold)
 
         aiProviderLabel.font = .systemFont(ofSize: 11)
         aiProviderLabel.lineBreakMode = .byWordWrapping
@@ -178,7 +177,7 @@ final class MainPopoverViewController: NSViewController, NSTableViewDataSource, 
         progressIndicator.translatesAutoresizingMaskIntoConstraints = false
         progressIndicator.isDisplayedWhenStopped = false
 
-        refreshButton.image = NSImage(systemSymbolName: "arrow.clockwise", accessibilityDescription: "Refresh")
+        refreshButton.image = NSImage(systemSymbolName: "arrow.clockwise", accessibilityDescription: "새로고침")
         refreshButton.bezelStyle = .texturedRounded
         refreshButton.target = self
         refreshButton.action = #selector(handleRefresh)
@@ -187,10 +186,6 @@ final class MainPopoverViewController: NSViewController, NSTableViewDataSource, 
         requestAccessButton.target = self
         requestAccessButton.action = #selector(handlePromptForTrust)
         requestAccessButton.isHidden = true
-
-        settingsButton.bezelStyle = .rounded
-        settingsButton.target = self
-        settingsButton.action = #selector(handleOpenSettings)
 
         aiDraftButton.bezelStyle = .rounded
         aiDraftButton.target = self
@@ -217,6 +212,7 @@ final class MainPopoverViewController: NSViewController, NSTableViewDataSource, 
         sendButton.action = #selector(handleSend)
 
         configureChatsTableView()
+        configureRoomNameField()
         configureAIConversationTextView()
         configureAIPromptField()
         configureMessageTextView()
@@ -264,8 +260,7 @@ final class MainPopoverViewController: NSViewController, NSTableViewDataSource, 
             emptyStateLabel.trailingAnchor.constraint(lessThanOrEqualTo: chatsContainer.trailingAnchor, constant: -16)
         ])
 
-        let aiLabel = makeSectionLabel("AI Draft Assist")
-        let messageLabel = makeSectionLabel("Message")
+        let aiLabel = makeSectionLabel("AI 초안 보조")
         let aiButtonsRow = NSStackView(views: [aiProviderLabel, NSView(), aiAskButton, aiDraftButton, aiRewriteButton])
         aiButtonsRow.orientation = .horizontal
         aiButtonsRow.alignment = .centerY
@@ -279,7 +274,7 @@ final class MainPopoverViewController: NSViewController, NSTableViewDataSource, 
         aiConversationScrollView.documentView = aiConversationTextView
         aiConversationScrollView.heightAnchor.constraint(equalToConstant: 100).isActive = true
 
-        let aiConversationLabel = makeSectionLabel("Conversation")
+        let aiConversationLabel = makeSectionLabel("대화")
         let aiConversationHeader = NSStackView(views: [aiConversationLabel, NSView(), aiUseReplyButton])
         aiConversationHeader.orientation = .horizontal
         aiConversationHeader.alignment = .centerY
@@ -293,7 +288,7 @@ final class MainPopoverViewController: NSViewController, NSTableViewDataSource, 
         messageScrollView.documentView = messageTextView
         messageScrollView.heightAnchor.constraint(equalToConstant: 120).isActive = true
 
-        let buttonsRow = NSStackView(views: [settingsButton, NSView(), dryRunButton, sendButton])
+        let buttonsRow = NSStackView(views: [NSView(), dryRunButton, sendButton])
         buttonsRow.orientation = .horizontal
         buttonsRow.alignment = .centerY
         buttonsRow.spacing = 8
@@ -302,18 +297,19 @@ final class MainPopoverViewController: NSViewController, NSTableViewDataSource, 
             titleRow,
             statusRow,
             makeSeparator(),
+            roomNameLabel,
+            roomNameField,
+            messageLabel,
+            messageScrollView,
+            buttonsRow,
+            selectionLabel,
             chatCountLabel,
             chatsContainer,
-            selectionLabel,
             aiLabel,
             aiConversationHeader,
             aiConversationScrollView,
             aiPromptField,
             aiButtonsRow,
-            messageLabel,
-            messageScrollView,
-            preferencesLabel,
-            buttonsRow,
             feedbackLabel
         ])
         rootStack.orientation = .vertical
@@ -332,6 +328,7 @@ final class MainPopoverViewController: NSViewController, NSTableViewDataSource, 
             rootStack.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -14),
             chatsContainer.widthAnchor.constraint(equalTo: rootStack.widthAnchor),
             chatsScrollView.widthAnchor.constraint(equalTo: rootStack.widthAnchor),
+            roomNameField.widthAnchor.constraint(equalTo: rootStack.widthAnchor),
             aiConversationScrollView.widthAnchor.constraint(equalTo: rootStack.widthAnchor),
             aiPromptField.widthAnchor.constraint(equalTo: rootStack.widthAnchor),
             messageScrollView.widthAnchor.constraint(equalTo: rootStack.widthAnchor),
@@ -357,6 +354,14 @@ final class MainPopoverViewController: NSViewController, NSTableViewDataSource, 
         chatsTableView.dataSource = self
     }
 
+    private func configureRoomNameField() {
+        roomNameField.font = .systemFont(ofSize: 13)
+        roomNameField.placeholderString = "채팅방 이름을 입력하세요"
+        roomNameField.delegate = self
+        roomNameField.target = self
+        roomNameField.action = #selector(handleRoomNameChanged)
+    }
+
     private func configureMessageTextView() {
         messageTextView.font = .systemFont(ofSize: 13)
         messageTextView.textColor = .labelColor
@@ -375,7 +380,7 @@ final class MainPopoverViewController: NSViewController, NSTableViewDataSource, 
 
     private func configureAIPromptField() {
         aiPromptField.font = .systemFont(ofSize: 12)
-        aiPromptField.placeholderString = "Ask AI anything about the message, or describe what you want to send"
+        aiPromptField.placeholderString = "AI에게 질문하거나, 보내고 싶은 메시지를 설명하세요"
         aiPromptField.delegate = self
         aiPromptField.target = self
         aiPromptField.action = #selector(handleAIPromptChanged)
@@ -388,7 +393,7 @@ final class MainPopoverViewController: NSViewController, NSTableViewDataSource, 
         aiConversationTextView.isEditable = false
         aiConversationTextView.isSelectable = true
         aiConversationTextView.textContainerInset = NSSize(width: 8, height: 8)
-        aiConversationTextView.string = "No AI conversation yet. Ask a question or describe the message you want."
+        aiConversationTextView.string = "아직 AI 대화가 없습니다. 질문을 하거나 원하는 메시지를 설명해 보세요."
     }
 
     private func makeSectionLabel(_ string: String) -> NSTextField {
@@ -422,6 +427,9 @@ final class MainPopoverViewController: NSViewController, NSTableViewDataSource, 
         let previousChatID = selectedChatID
         let row = chatsTableView.selectedRow
         selectedChatID = chats.indices.contains(row) ? chats[row].chatID : nil
+        if let selectedChat = selectedChat {
+            roomNameField.stringValue = selectedChat.title
+        }
         if previousChatID != selectedChatID {
             aiConversation.removeAll()
             updateAIConversationSummary()
@@ -438,7 +446,7 @@ final class MainPopoverViewController: NSViewController, NSTableViewDataSource, 
     }
 
     func controlTextDidChange(_ obj: Notification) {
-        if obj.object as? NSTextField == aiPromptField {
+        if obj.object as? NSTextField == aiPromptField || obj.object as? NSTextField == roomNameField {
             updateUIState()
         }
     }
@@ -453,6 +461,15 @@ final class MainPopoverViewController: NSViewController, NSTableViewDataSource, 
 
     @objc private func handleOpenSettings() {
         onOpenSettings?()
+    }
+
+    @objc private func handleRoomNameChanged() {
+        if let selectedChat, roomNameField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines) != selectedChat.title {
+            selectedChatID = nil
+            chatsTableView.deselectAll(nil)
+            updateSelectionSummary()
+        }
+        updateUIState()
     }
 
     @objc private func handleDryRun() {
@@ -477,13 +494,13 @@ final class MainPopoverViewController: NSViewController, NSTableViewDataSource, 
 
     @objc private func handleUseLastAIReply() {
         guard let reply = aiConversation.last(where: { $0.role == "assistant" }) else {
-            applyFeedback("There is no AI reply to apply yet.", kind: .warning)
+            applyFeedback("아직 적용할 AI 답변이 없습니다.", kind: .warning)
             return
         }
         messageTextView.string = reply.content
         updateUIState()
         view.window?.makeFirstResponder(messageTextView)
-        applyFeedback("Moved the last AI reply into the message draft. Review it, then use Dry Run or Send.", kind: .success)
+        applyFeedback("마지막 AI 답변을 메시지 초안으로 옮겼습니다. 검토한 뒤 드라이런 또는 전송을 사용하세요.", kind: .success)
     }
 
     @objc private func handleAIPromptChanged() {
@@ -499,7 +516,7 @@ final class MainPopoverViewController: NSViewController, NSTableViewDataSource, 
     private func refreshAll(trigger: RefreshTrigger) {
         let service = self.service
         let promptForTrust = trigger == .promptForTrust
-        let loadingMessage = promptForTrust ? "Requesting the macOS Accessibility prompt…" : "Refreshing KakaoTalk status and visible chats…"
+        let loadingMessage = promptForTrust ? "macOS 접근성 권한 요청을 여는 중…" : "카카오톡 상태와 보이는 채팅방을 새로고침하는 중…"
 
         isBusy = true
         progressIndicator.startAnimation(nil)
@@ -533,7 +550,7 @@ final class MainPopoverViewController: NSViewController, NSTableViewDataSource, 
                 self.updateEmptyStateVisibility()
                 self.updateSelectionSummary()
                 self.updateStatusSummary(
-                    headline: "Automation status unavailable",
+                    headline: "자동화 상태를 확인할 수 없음",
                     detail: self.userMessage(for: error),
                     tint: .systemRed
                 )
@@ -560,22 +577,22 @@ final class MainPopoverViewController: NSViewController, NSTableViewDataSource, 
 
         if !snapshot.status.permission.trusted {
             applyFeedback(
-                "Accessibility permission is required for the menu bar app host before any KakaoTalk automation can run.",
+                "메뉴 막대 앱을 실행하는 프로세스에 접근성 권한이 있어야 카카오톡 자동화를 사용할 수 있습니다.",
                 kind: .error
             )
         } else if !snapshot.status.kakaoTalkRunning {
             applyFeedback(
-                "KakaoTalk is not running. Launch it, sign in, and reopen the popover to load chats.",
+                "카카오톡이 실행 중이 아닙니다. 실행하고 로그인한 뒤 팝오버를 다시 열어 채팅방을 불러오세요.",
                 kind: .warning
             )
         } else if snapshot.status.loginState != "ready" {
             applyFeedback(loginStateMessage(snapshot.status.loginState), kind: .warning)
         } else if let chatsError = snapshot.chatsError {
-            applyFeedback("KakaoTalk is reachable, but visible chats could not be loaded: \(userMessage(for: chatsError))", kind: .error)
+            applyFeedback("카카오톡에는 접근했지만 보이는 채팅방을 불러오지 못했습니다: \(userMessage(for: chatsError))", kind: .error)
         } else if snapshot.chats.isEmpty {
-            applyFeedback("No visible chats were found in the current KakaoTalk list window.", kind: .warning)
+            applyFeedback("현재 카카오톡 목록 창에서 보이는 채팅방을 찾지 못했습니다.", kind: .warning)
         } else {
-            applyFeedback("Loaded \(snapshot.chats.count) visible chats. Dry Run keeps the workflow safe without pressing send.", kind: .success)
+            applyFeedback("보이는 카카오톡 채팅방 \(snapshot.chats.count)개를 불러왔습니다. 드라이런은 실제 전송 없이 흐름을 안전하게 확인합니다.", kind: .success)
         }
 
         publishStatusAppearance()
@@ -595,22 +612,26 @@ final class MainPopoverViewController: NSViewController, NSTableViewDataSource, 
     }
 
     private func runSend(dryRun: Bool) {
-        let draft = ComposeDraftState(selectedChatID: selectedChatID, message: messageTextView.string, isBusy: isBusy)
-        guard draft.canSubmit, let selectedChat = selectedChat else { return }
+        let draft = ComposeDraftState(selectedChatID: selectedChatID, chatName: roomNameField.stringValue, message: messageTextView.string, isBusy: isBusy)
+        guard draft.canSubmit else { return }
 
         let service = self.service
         let keepWindowOpen = preferences.keepChatWindowOpen
         let matchMode = preferences.defaultMatchMode
         let sendSpeed = preferences.defaultSendSpeed
         let message = draft.trimmedMessage
+        let selectedChat = self.selectedChat
+        let chatID = selectedChat?.chatID
+        let chatName = draft.trimmedChatName
 
         isBusy = true
         progressIndicator.startAnimation(nil)
-        applyFeedback(dryRun ? "Running a dry run through KTalkAXService…" : "Sending through KTalkAXService and waiting for verification…", kind: .info)
+        applyFeedback(dryRun ? "KTalkAXService로 드라이런을 실행하는 중…" : "KTalkAXService로 전송하고 검증을 기다리는 중…", kind: .info)
 
         performBackgroundWork {
             try service.send(
-                chatID: selectedChat.chatID,
+                chat: chatName,
+                chatID: chatID,
                 message: message,
                 dryRun: dryRun,
                 keepWindow: keepWindowOpen,
@@ -628,10 +649,10 @@ final class MainPopoverViewController: NSViewController, NSTableViewDataSource, 
                     self.messageTextView.string = ""
                 }
                 self.updateUIState()
-                let fallbackText = sendResult.usedFallback.isEmpty ? "" : " Fallbacks: \(sendResult.usedFallback.joined(separator: ", "))."
+                let fallbackText = sendResult.usedFallback.isEmpty ? "" : " 대체 수단: \(sendResult.usedFallback.joined(separator: ", "))."
                 let successText = dryRun
-                    ? "Dry run prepared \(sendResult.matchedChat). No message was sent.\(fallbackText)"
-                    : "Sent to \(sendResult.matchedChat) and verified in KakaoTalk.\(fallbackText)"
+                    ? "\(sendResult.matchedChat) 채팅방 기준으로 드라이런 준비를 마쳤습니다. 실제 메시지는 보내지 않았습니다.\(fallbackText)"
+                    : "\(sendResult.matchedChat) 채팅방에 전송했고 카카오톡에서 검증까지 마쳤습니다.\(fallbackText)"
                 self.applyFeedback(successText, kind: .success)
             case .failure(let error):
                 self.applyFeedback(self.userMessage(for: error), kind: .error)
@@ -644,7 +665,7 @@ final class MainPopoverViewController: NSViewController, NSTableViewDataSource, 
         reloadAIProviders()
 
         guard let selectedChat else {
-            applyFeedback("Select a visible KakaoTalk chat before using AI draft assist.", kind: .warning)
+            applyFeedback("AI 초안 기능을 쓰기 전에 보이는 카카오톡 채팅방을 먼저 선택하세요.", kind: .warning)
             return
         }
 
@@ -661,12 +682,12 @@ final class MainPopoverViewController: NSViewController, NSTableViewDataSource, 
         switch action {
         case .draft:
             guard !instructions.isEmpty || !trimmedMessage.isEmpty else {
-                applyFeedback("Add a short AI prompt or some draft notes before asking for an AI draft.", kind: .warning)
+                applyFeedback("AI 초안을 요청하기 전에 짧은 지시문이나 초안 메모를 먼저 입력하세요.", kind: .warning)
                 return
             }
         case .rewrite:
             guard !trimmedMessage.isEmpty else {
-                applyFeedback("Write or paste a draft first, then use Rewrite with AI.", kind: .warning)
+                applyFeedback("먼저 초안을 작성하거나 붙여넣은 뒤 AI로 다듬기를 사용하세요.", kind: .warning)
                 return
             }
         }
@@ -674,7 +695,7 @@ final class MainPopoverViewController: NSViewController, NSTableViewDataSource, 
         aiTask?.cancel()
         isBusy = true
         progressIndicator.startAnimation(nil)
-        applyFeedback("\(action.progressMessage) Provider: \(provider.displayName).", kind: .info)
+        applyFeedback("\(action.progressMessage) 제공자: \(provider.displayName).", kind: .info)
 
         aiTask = Task { [weak self] in
             guard let self else { return }
@@ -704,7 +725,7 @@ final class MainPopoverViewController: NSViewController, NSTableViewDataSource, 
         reloadAIProviders()
 
         guard let selectedChat else {
-            applyFeedback("Select a visible KakaoTalk chat before starting an AI conversation.", kind: .warning)
+            applyFeedback("AI 대화를 시작하기 전에 보이는 카카오톡 채팅방을 먼저 선택하세요.", kind: .warning)
             return
         }
 
@@ -715,7 +736,7 @@ final class MainPopoverViewController: NSViewController, NSTableViewDataSource, 
 
         let prompt = aiPromptField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !prompt.isEmpty else {
-            applyFeedback("Enter an AI question or message request first.", kind: .warning)
+            applyFeedback("먼저 AI에게 물을 질문이나 원하는 메시지 요청을 입력하세요.", kind: .warning)
             return
         }
 
@@ -724,7 +745,7 @@ final class MainPopoverViewController: NSViewController, NSTableViewDataSource, 
         aiTask?.cancel()
         isBusy = true
         progressIndicator.startAnimation(nil)
-        applyFeedback("Asking AI with \(provider.displayName)…", kind: .info)
+        applyFeedback("\(provider.displayName)로 AI에게 묻는 중…", kind: .info)
 
         aiTask = Task { [weak self] in
             guard let self else { return }
@@ -744,7 +765,7 @@ final class MainPopoverViewController: NSViewController, NSTableViewDataSource, 
                 self.aiPromptField.stringValue = ""
                 self.updateAIConversationSummary()
                 self.updateUIState()
-                self.applyFeedback("AI replied with \(result.provider.displayName) · \(result.model). Use Last Reply to move it into the draft if you want.", kind: .success)
+                self.applyFeedback("AI가 \(result.provider.displayName) · \(result.model)으로 답변했습니다. 원하면 '마지막 답변 적용'으로 초안에 넣을 수 있습니다.", kind: .success)
             } catch {
                 guard !Task.isCancelled else { return }
                 self.isBusy = false
@@ -762,23 +783,23 @@ final class MainPopoverViewController: NSViewController, NSTableViewDataSource, 
         let composedText = result.text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !composedText.isEmpty else {
             updateUIState()
-            applyFeedback("The AI provider returned an empty draft. Adjust the prompt and try again.", kind: .error)
+            applyFeedback("AI 제공자가 빈 초안을 돌려줬습니다. 지시문을 조정한 뒤 다시 시도하세요.", kind: .error)
             return
         }
 
         messageTextView.string = composedText
         updateUIState()
         view.window?.makeFirstResponder(messageTextView)
-        applyFeedback("\(action.successVerb) with \(result.provider.displayName) · \(result.model). Review the message, then use Dry Run or Send.", kind: .success)
+        applyFeedback("\(action.successVerb): \(result.provider.displayName) · \(result.model). 메시지를 검토한 뒤 드라이런 또는 전송을 사용하세요.", kind: .success)
     }
 
     private func updateAIConversationSummary() {
         if aiConversation.isEmpty {
-            aiConversationTextView.string = "No AI conversation yet. Ask a question or describe the message you want."
+            aiConversationTextView.string = "아직 AI 대화가 없습니다. 질문을 하거나 원하는 메시지를 설명해 보세요."
             return
         }
         aiConversationTextView.string = aiConversation.map { turn in
-            let prefix = turn.role == "assistant" ? "AI" : "You"
+            let prefix = turn.role == "assistant" ? "AI" : "나"
             return "\(prefix): \(turn.content)"
         }.joined(separator: "\n\n")
     }
@@ -789,7 +810,7 @@ final class MainPopoverViewController: NSViewController, NSTableViewDataSource, 
     }
 
     private func updateUIState() {
-        let draft = ComposeDraftState(selectedChatID: selectedChatID, message: messageTextView.string, isBusy: isBusy)
+        let draft = ComposeDraftState(selectedChatID: selectedChatID, chatName: roomNameField.stringValue, message: messageTextView.string, isBusy: isBusy)
         let hasAIProvider = preferences.resolvedAIProvider(from: availableAIProviders) != nil
         let trimmedPrompt = aiPromptField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
         dryRunButton.isEnabled = draft.canSubmit
@@ -800,13 +821,12 @@ final class MainPopoverViewController: NSViewController, NSTableViewDataSource, 
         aiUseReplyButton.isEnabled = !isBusy && aiConversation.contains(where: { $0.role == "assistant" })
         refreshButton.isEnabled = !isBusy
         requestAccessButton.isEnabled = !isBusy
-        settingsButton.isEnabled = !isBusy
+        roomNameField.isEnabled = !isBusy
         aiPromptField.isEnabled = !isBusy
         messageTextView.isEditable = !isBusy
     }
 
     private func updatePreferencesSummary() {
-        preferencesLabel.stringValue = preferences.summaryText
     }
 
     private func reloadAIProviders() {
@@ -818,19 +838,19 @@ final class MainPopoverViewController: NSViewController, NSTableViewDataSource, 
 
     private func updateAIProviderSummary() {
         if let provider = preferences.resolvedAIProvider(from: availableAIProviders) {
-            aiProviderLabel.stringValue = "Provider: \(provider.displayName). Ask AI, draft, or rewrite before sending."
+            aiProviderLabel.stringValue = "제공자: \(provider.displayName). 전송 전에 AI에게 묻기, 초안 생성, 다듬기를 사용할 수 있습니다."
             aiProviderLabel.textColor = .secondaryLabelColor
         } else {
-            aiProviderLabel.stringValue = "No AI provider configured. Add credentials, then choose a provider in Settings."
+            aiProviderLabel.stringValue = "설정된 AI 제공자가 없습니다. 자격 정보를 추가한 뒤 설정에서 제공자를 선택하세요."
             aiProviderLabel.textColor = .systemOrange
         }
     }
 
     private func updateSelectionSummary() {
         if let selectedChat {
-            selectionLabel.stringValue = "Selected: \(selectedChat.title) (\(selectedChat.chatID))"
+            selectionLabel.stringValue = "선택됨: \(selectedChat.title) (\(selectedChat.chatID)) — 바로 드라이런 또는 전송할 수 있습니다."
         } else {
-            selectionLabel.stringValue = "Select a visible KakaoTalk chat to enable Dry Run and Send."
+            selectionLabel.stringValue = "채팅방 이름을 직접 입력하거나, 아래 목록에서 선택한 뒤 바로 전송할 수 있습니다."
         }
     }
 
@@ -846,13 +866,13 @@ final class MainPopoverViewController: NSViewController, NSTableViewDataSource, 
     }
 
     private func makeStatusHeadline(status: StatusResult) -> String {
-        let trustText = status.permission.trusted ? "Accessibility granted" : "Accessibility required"
-        let runningText = status.kakaoTalkRunning ? "KakaoTalk running" : "KakaoTalk not running"
+        let trustText = status.permission.trusted ? "접근성 권한 허용됨" : "접근성 권한 필요"
+        let runningText = status.kakaoTalkRunning ? "카카오톡 실행 중" : "카카오톡 실행 안 됨"
         return "\(trustText) · \(runningText)"
     }
 
     private func makeStatusDetail(status: StatusResult) -> String {
-        "Login: \(humanReadableLoginState(status.loginState)) · Windows: \(status.activeWindowCount)"
+        "로그인: \(humanReadableLoginState(status.loginState)) · 창 수: \(status.activeWindowCount)"
     }
 
     private func makeStatusTint(status: StatusResult) -> NSColor {
@@ -867,28 +887,28 @@ final class MainPopoverViewController: NSViewController, NSTableViewDataSource, 
 
     private func humanReadableLoginState(_ loginState: String) -> String {
         switch loginState {
-        case "ready": return "Ready"
-        case "permission_denied": return "Permission required"
-        case "not_running": return "Not running"
-        case "login_required": return "Login required"
-        case "app_locked": return "Locked"
-        case "unknown": return "Unknown"
-        default: return loginState.replacingOccurrences(of: "_", with: " ").capitalized
+        case "ready": return "준비 완료"
+        case "permission_denied": return "권한 필요"
+        case "not_running": return "실행 안 됨"
+        case "login_required": return "로그인 필요"
+        case "app_locked": return "잠김"
+        case "unknown": return "알 수 없음"
+        default: return loginState.replacingOccurrences(of: "_", with: " ")
         }
     }
 
     private func loginStateMessage(_ loginState: String) -> String {
         switch loginState {
         case "login_required":
-            return "KakaoTalk looks logged out. Open KakaoTalk manually and sign in before using the menu bar workflow."
+            return "카카오톡이 로그아웃된 상태로 보입니다. 메뉴 막대 흐름을 쓰기 전에 직접 열어서 로그인하세요."
         case "app_locked":
-            return "KakaoTalk appears locked. Unlock it first, then refresh the menu bar popover."
+            return "카카오톡이 잠긴 상태로 보입니다. 먼저 잠금을 해제한 뒤 메뉴 막대 팝오버를 새로고침하세요."
         case "permission_denied":
-            return "Accessibility access is required before the menu bar app can inspect or automate KakaoTalk."
+            return "메뉴 막대 앱이 카카오톡을 확인하거나 자동화하려면 먼저 접근성 권한이 필요합니다."
         case "not_running":
-            return "KakaoTalk is not currently running."
+            return "현재 카카오톡이 실행 중이 아닙니다."
         default:
-            return "KakaoTalk is not ready yet. Current login state: \(humanReadableLoginState(loginState))."
+            return "아직 카카오톡이 준비되지 않았습니다. 현재 로그인 상태: \(humanReadableLoginState(loginState))."
         }
     }
 
@@ -911,54 +931,13 @@ final class MainPopoverViewController: NSViewController, NSTableViewDataSource, 
     }
 
     private func noAIProviderMessage() -> String {
-        "No AI provider is configured. Add ~/.katalk-ax/ai-providers.json or set GEMINI_API_KEY / OPENAI_API_KEY, then choose a provider in Settings."
+        "설정된 AI 제공자가 없습니다. ~/.katalk-ax/ai-providers.json 을 추가하거나 GEMINI_API_KEY / OPENAI_API_KEY를 설정한 뒤 설정에서 제공자를 선택하세요."
     }
 
     private func currentStatusAppearance() -> MenuBarStatusItemAppearance {
-        if isBusy {
-            return MenuBarStatusItemAppearance(
-                symbolName: "arrow.triangle.2.circlepath.circle.fill",
-                tintColor: .controlAccentColor,
-                tooltip: "katalk-ax: refreshing KakaoTalk status"
-            )
-        }
-
-        guard let latestStatus else {
-            return MenuBarStatusItemAppearance(
-                symbolName: "ellipsis.message",
-                tintColor: .labelColor,
-                tooltip: "katalk-ax: status unavailable"
-            )
-        }
-
-        if !latestStatus.permission.trusted {
-            return MenuBarStatusItemAppearance(
-                symbolName: "exclamationmark.triangle.fill",
-                tintColor: .systemRed,
-                tooltip: "katalk-ax: Accessibility access required"
-            )
-        }
-
-        if !latestStatus.kakaoTalkRunning {
-            return MenuBarStatusItemAppearance(
-                symbolName: "bolt.slash.circle.fill",
-                tintColor: .systemOrange,
-                tooltip: "katalk-ax: KakaoTalk is not running"
-            )
-        }
-
-        if latestStatus.loginState != "ready" {
-            return MenuBarStatusItemAppearance(
-                symbolName: "exclamationmark.bubble.fill",
-                tintColor: .systemOrange,
-                tooltip: "katalk-ax: KakaoTalk needs attention"
-            )
-        }
-
-        return MenuBarStatusItemAppearance(
-            symbolName: "bubble.left.and.bubble.right.fill",
-            tintColor: .systemGreen,
-            tooltip: "katalk-ax: KakaoTalk ready"
+        MenuBarStatusAppearanceResolver.resolve(
+            isBusy: isBusy,
+            latestStatus: latestStatus
         )
     }
 

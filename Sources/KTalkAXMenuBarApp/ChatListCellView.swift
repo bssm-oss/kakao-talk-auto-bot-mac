@@ -28,7 +28,7 @@ final class ChatListCellView: NSTableCellView {
             details.append(metaEstimate)
         }
         if let unreadEstimate = chat.unreadEstimate {
-            details.append("Unread \(unreadEstimate)")
+            details.append("안읽음 \(unreadEstimate)")
         }
         details.append(chat.chatID)
         detailLabel.stringValue = details.joined(separator: " · ")

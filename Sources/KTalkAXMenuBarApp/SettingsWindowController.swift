@@ -10,7 +10,7 @@ final class SettingsWindowController: NSWindowController {
         self.settingsViewController = SettingsViewController(preferences: preferences, aiDraftWorkflow: aiDraftWorkflow)
 
         let window = NSWindow(contentViewController: settingsViewController)
-        window.title = "katalk-ax Settings"
+        window.title = "katalk-ax 설정"
         window.styleMask = [.titled, .closable, .miniaturizable]
         window.setContentSize(NSSize(width: 460, height: 430))
         window.isReleasedWhenClosed = false
@@ -42,17 +42,17 @@ private final class SettingsViewController: NSViewController {
     private let aiDraftWorkflow: AIDraftWorkflow
     private var availableAIProviders: [AIProviderKind] = []
 
-    private let descriptionLabel = NSTextField(labelWithString: "These defaults apply to the native menu bar app only. The CLI remains unchanged.")
+    private let descriptionLabel = NSTextField(labelWithString: "이 기본 설정은 네이티브 메뉴 막대 앱에만 적용됩니다. CLI 동작은 그대로 유지됩니다.")
     private let matchModePopUp = NSPopUpButton()
     private let sendSpeedPopUp = NSPopUpButton()
-    private let keepWindowCheckbox = NSButton(checkboxWithTitle: "Keep chat window open after dry run or send", target: nil, action: nil)
-    private let aiDescriptionLabel = NSTextField(labelWithString: "AI drafting stays optional. It only writes into the message box so you can review the result before Dry Run or Send.")
+    private let keepWindowCheckbox = NSButton(checkboxWithTitle: "드라이런 또는 전송 후에도 채팅창 유지", target: nil, action: nil)
+    private let aiDescriptionLabel = NSTextField(labelWithString: "AI 초안 기능은 선택 사항입니다. 결과는 메시지 입력칸에만 채워지므로 드라이런이나 전송 전에 직접 검토할 수 있습니다.")
     private let aiProviderPopUp = NSPopUpButton()
     private let aiProviderStatusLabel = NSTextField(labelWithString: "")
-    private let aiConfigPathLabel = NSTextField(labelWithString: "AI config: —")
-    private let statusLabel = NSTextField(labelWithString: "Current status: waiting for a refresh from the menu bar app.")
-    private let cachePathLabel = NSTextField(labelWithString: "Cache path: —")
-    private let registryPathLabel = NSTextField(labelWithString: "Registry path: —")
+    private let aiConfigPathLabel = NSTextField(labelWithString: "AI 설정 파일: —")
+    private let statusLabel = NSTextField(labelWithString: "현재 상태: 메뉴 막대 앱에서 새로고침을 기다리는 중입니다.")
+    private let cachePathLabel = NSTextField(labelWithString: "캐시 경로: —")
+    private let registryPathLabel = NSTextField(labelWithString: "레지스트리 경로: —")
 
     init(preferences: AppPreferences, aiDraftWorkflow: AIDraftWorkflow) {
         self.preferences = preferences
@@ -86,36 +86,45 @@ private final class SettingsViewController: NSViewController {
         aiProviderPopUp.removeAllItems()
 
         if availableAIProviders.isEmpty {
-            aiProviderPopUp.addItem(withTitle: "No provider configured")
+            aiProviderPopUp.addItem(withTitle: "설정된 제공자 없음")
             aiProviderPopUp.isEnabled = false
-            aiProviderStatusLabel.stringValue = "Add ~/.katalk-ax/ai-providers.json or set GEMINI_API_KEY / OPENAI_API_KEY, then reopen Settings."
+            aiProviderStatusLabel.stringValue = "~/.katalk-ax/ai-providers.json 을 추가하거나 GEMINI_API_KEY / OPENAI_API_KEY를 설정한 뒤 설정 창을 다시 여세요."
             aiProviderStatusLabel.textColor = .systemOrange
         } else {
             aiProviderPopUp.addItems(withTitles: availableAIProviders.map(\.displayName))
             aiProviderPopUp.isEnabled = true
-            aiProviderStatusLabel.stringValue = "The popover will use this provider for AI Draft and Rewrite with AI."
+            aiProviderStatusLabel.stringValue = "팝오버에서 AI 초안 생성과 AI 다듬기 작업에 이 제공자를 사용합니다."
             aiProviderStatusLabel.textColor = .secondaryLabelColor
         }
 
-        aiConfigPathLabel.stringValue = "AI config: \(aiDraftWorkflow.configurationPath)"
+        aiConfigPathLabel.stringValue = "AI 설정 파일: \(aiDraftWorkflow.configurationPath)"
         syncControlsFromPreferences()
     }
 
     func update(status: StatusResult?) {
         guard let status else {
-            statusLabel.stringValue = "Current status: waiting for a refresh from the menu bar app."
-            cachePathLabel.stringValue = "Cache path: —"
-            registryPathLabel.stringValue = "Registry path: —"
+            statusLabel.stringValue = "현재 상태: 메뉴 막대 앱에서 새로고침을 기다리는 중입니다."
+            cachePathLabel.stringValue = "캐시 경로: —"
+            registryPathLabel.stringValue = "레지스트리 경로: —"
             return
         }
 
-        statusLabel.stringValue = "Current status: \(status.permission.trusted ? "trusted" : "permission required") · \(status.kakaoTalkRunning ? "running" : "not running") · login \(status.loginState)"
-        cachePathLabel.stringValue = "Cache path: \(status.cachePath)"
-        registryPathLabel.stringValue = "Registry path: \(status.registryPath)"
+        let loginText: String = switch status.loginState {
+        case "ready": "준비 완료"
+        case "permission_denied": "권한 필요"
+        case "not_running": "실행 안 됨"
+        case "login_required": "로그인 필요"
+        case "app_locked": "잠김"
+        case "unknown": "알 수 없음"
+        default: status.loginState
+        }
+        statusLabel.stringValue = "현재 상태: \(status.permission.trusted ? "권한 허용" : "권한 필요") · \(status.kakaoTalkRunning ? "실행 중" : "실행 안 됨") · 로그인 \(loginText)"
+        cachePathLabel.stringValue = "캐시 경로: \(status.cachePath)"
+        registryPathLabel.stringValue = "레지스트리 경로: \(status.registryPath)"
     }
 
     private func buildInterface() {
-        let titleLabel = NSTextField(labelWithString: "Menu Bar Defaults")
+        let titleLabel = NSTextField(labelWithString: "메뉴 막대 기본 설정")
         titleLabel.font = .systemFont(ofSize: 17, weight: .semibold)
 
         descriptionLabel.font = .systemFont(ofSize: 12)
@@ -148,9 +157,9 @@ private final class SettingsViewController: NSViewController {
         registryPathLabel.textColor = .secondaryLabelColor
         registryPathLabel.lineBreakMode = .byTruncatingMiddle
 
-        let matchModeLabel = makeFieldLabel("Default matching")
-        let sendSpeedLabel = makeFieldLabel("Default speed")
-        let aiProviderLabel = makeFieldLabel("Default AI provider")
+        let matchModeLabel = makeFieldLabel("기본 매칭 방식")
+        let sendSpeedLabel = makeFieldLabel("기본 속도")
+        let aiProviderLabel = makeFieldLabel("기본 AI 제공자")
 
         let grid = NSGridView(views: [
             [matchModeLabel, matchModePopUp],
@@ -163,11 +172,11 @@ private final class SettingsViewController: NSViewController {
         grid.xPlacement = .leading
         grid.yPlacement = .center
 
-        let runtimeLabel = NSTextField(labelWithString: "Runtime")
+        let runtimeLabel = NSTextField(labelWithString: "실행 정보")
         runtimeLabel.font = .systemFont(ofSize: 12, weight: .semibold)
         runtimeLabel.textColor = .secondaryLabelColor
 
-        let aiLabel = NSTextField(labelWithString: "AI Draft Assist")
+        let aiLabel = NSTextField(labelWithString: "AI 초안 보조")
         aiLabel.font = .systemFont(ofSize: 12, weight: .semibold)
         aiLabel.textColor = .secondaryLabelColor
 
@@ -205,11 +214,11 @@ private final class SettingsViewController: NSViewController {
     }
 
     private func configureControls() {
-        matchModePopUp.addItems(withTitles: [ChatMatchMode.exact, .smart, .fuzzy].map { $0.rawValue.capitalized })
+        matchModePopUp.addItems(withTitles: ["정확 일치", "스마트", "퍼지"])
         matchModePopUp.target = self
         matchModePopUp.action = #selector(handleMatchModeChanged)
 
-        sendSpeedPopUp.addItems(withTitles: [SendSpeed.slow, .normal, .fast].map { $0.rawValue.capitalized })
+        sendSpeedPopUp.addItems(withTitles: ["느림", "보통", "빠름"])
         sendSpeedPopUp.target = self
         sendSpeedPopUp.action = #selector(handleSendSpeedChanged)
 
@@ -221,8 +230,18 @@ private final class SettingsViewController: NSViewController {
     }
 
     private func syncControlsFromPreferences() {
-        matchModePopUp.selectItem(withTitle: preferences.defaultMatchMode.rawValue.capitalized)
-        sendSpeedPopUp.selectItem(withTitle: preferences.defaultSendSpeed.rawValue.capitalized)
+        let selectedMatchTitle = switch preferences.defaultMatchMode {
+        case .exact: "정확 일치"
+        case .smart: "스마트"
+        case .fuzzy: "퍼지"
+        }
+        let selectedSpeedTitle = switch preferences.defaultSendSpeed {
+        case .slow: "느림"
+        case .normal: "보통"
+        case .fast: "빠름"
+        }
+        matchModePopUp.selectItem(withTitle: selectedMatchTitle)
+        sendSpeedPopUp.selectItem(withTitle: selectedSpeedTitle)
         keepWindowCheckbox.state = preferences.keepChatWindowOpen ? .on : .off
 
         guard let provider = preferences.resolvedAIProvider(from: availableAIProviders),

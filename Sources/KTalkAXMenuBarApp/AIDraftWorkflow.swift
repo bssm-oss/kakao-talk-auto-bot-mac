@@ -8,18 +8,18 @@ enum AIDraftAction: Sendable {
     var progressMessage: String {
         switch self {
         case .draft:
-            return "Generating an AI draft…"
+            return "AI 초안을 생성하는 중…"
         case .rewrite:
-            return "Rewriting the current draft with AI…"
+            return "현재 초안을 AI로 다듬는 중…"
         }
     }
 
     var successVerb: String {
         switch self {
         case .draft:
-            return "Drafted"
+            return "초안 생성 완료"
         case .rewrite:
-            return "Rewrote"
+            return "문장 다듬기 완료"
         }
     }
 }
@@ -28,9 +28,9 @@ extension AIProviderKind {
     var displayName: String {
         switch self {
         case .gemini:
-            return "Gemini"
+            return "제미나이"
         case .openAICompatible:
-            return "OpenAI-Compatible"
+            return "OpenAI 호환"
         }
     }
 }

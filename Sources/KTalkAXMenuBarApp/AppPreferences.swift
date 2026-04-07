@@ -41,9 +41,19 @@ final class AppPreferences {
     }
 
     var summaryText: String {
-        let closeBehavior = keepChatWindowOpen ? "keep chat open" : "close after send"
-        let aiText = defaultAIProvider?.displayName ?? "AI auto"
-        return "Defaults: \(defaultMatchMode.rawValue.capitalized) match · \(defaultSendSpeed.rawValue.capitalized) speed · \(closeBehavior) · \(aiText)"
+        let matchText = switch defaultMatchMode {
+        case .exact: "정확 일치"
+        case .smart: "스마트"
+        case .fuzzy: "퍼지"
+        }
+        let speedText = switch defaultSendSpeed {
+        case .slow: "느림"
+        case .normal: "보통"
+        case .fast: "빠름"
+        }
+        let closeBehavior = keepChatWindowOpen ? "채팅창 유지" : "전송 후 닫기"
+        let aiText = defaultAIProvider?.displayName ?? "AI 자동 선택"
+        return "기본값: \(matchText) · \(speedText) · \(closeBehavior) · \(aiText)"
     }
 
     func resolvedAIProvider(from availableProviders: [AIProviderKind]) -> AIProviderKind? {
