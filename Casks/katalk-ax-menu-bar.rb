@@ -4,7 +4,7 @@ cask "katalk-ax-menu-bar" do
 
   url "https://github.com/bssm-oss/kakao-talk-auto-bot-mac/releases/latest/download/katalk-ax.dmg"
   name "katalk-ax"
-  desc "Native AppKit menu bar app for KakaoTalk Accessibility automation"
+  desc "KakaoTalk 접근성 자동화를 위한 네이티브 AppKit 메뉴 막대 앱"
   homepage "https://github.com/bssm-oss/kakao-talk-auto-bot-mac"
 
   depends_on arch: :arm64

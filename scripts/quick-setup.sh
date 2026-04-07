@@ -8,27 +8,27 @@ AI_SAMPLE="$ROOT_DIR/packaging/examples/ai-providers.sample.json"
 
 mkdir -p "$CONFIG_DIR"
 
-echo "[1/4] Building CLI, MCP server, and menu bar app..."
+echo "[1/4] CLI, MCP 서버, 메뉴 막대 앱을 빌드하는 중..."
 swift build --package-path "$ROOT_DIR"
 swift build --package-path "$ROOT_DIR" --product katalk-ax-mcp
 swift build --package-path "$ROOT_DIR" --product katalk-ax-menu-bar
 
-echo "[2/4] Preparing config directory at $CONFIG_DIR"
+echo "[2/4] 설정 디렉터리를 준비하는 중: $CONFIG_DIR"
 if [[ ! -f "$AI_CONFIG" ]]; then
   cp "$AI_SAMPLE" "$AI_CONFIG"
-  echo "Created AI provider sample config at $AI_CONFIG"
+  echo "AI 제공자 샘플 설정 파일을 만들었습니다: $AI_CONFIG"
 else
-  echo "AI provider config already exists at $AI_CONFIG"
+  echo "AI 제공자 설정 파일이 이미 있습니다: $AI_CONFIG"
 fi
 
-echo "[3/4] Opening Accessibility settings..."
+echo "[3/4] 접근성 설정을 여는 중..."
 open "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility" || true
 
-echo "[4/4] Next steps"
+echo "[4/4] 다음 단계"
 cat <<EOF
-- Grant Accessibility permission to the app or terminal that will run katalk-ax.
-- Review and edit $AI_CONFIG if you want AI drafting.
-- Run: swift run katalk-ax status --json
-- Run: swift run katalk-ax-menu-bar
-- Run: swift run katalk-ax-mcp
+- katalk-ax를 실행할 앱 또는 터미널에 접근성 권한을 부여하세요.
+- AI 초안 기능을 쓰려면 $AI_CONFIG 파일을 검토하고 수정하세요.
+- 실행: swift run katalk-ax status --json
+- 실행: swift run katalk-ax-menu-bar
+- 실행: swift run katalk-ax-mcp
 EOF
