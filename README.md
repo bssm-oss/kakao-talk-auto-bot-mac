@@ -1,19 +1,19 @@
 # katalk-ax
 
-`katalk-ax` is a macOS command line tool that controls the real `KakaoTalk.app` through the macOS Accessibility API. It is designed for local-only automation where reliability and mis-send prevention matter more than speed.
+`katalk-ax`는 macOS 접근성 API로 실제 `KakaoTalk.app`을 직접 조작하는 도구입니다. 로컬 환경에서 특정 채팅방을 찾고, 메시지를 입력하고, 안전하게 드라이런/전송까지 수행할 수 있도록 설계되었습니다.
 
-## What it does
+## 무엇을 할 수 있나요?
 
-- Checks Accessibility permission for the actual process running the tool.
-- Finds, launches, and activates `KakaoTalk.app`.
-- Inspects KakaoTalk’s Accessibility tree for debugging.
-- Lists accessible chat candidates and stores a local chat registry.
-- Sends a message to an exactly matched chat, or blocks the send when the result is ambiguous.
-- Provides a native AppKit menu bar app that reuses the shared core service for status, chat loading, dry-runs, and sends.
+- 현재 실행 중인 프로세스의 접근성 권한 상태를 확인합니다.
+- `KakaoTalk.app`을 찾고, 실행하고, 활성화합니다.
+- KakaoTalk의 접근성 트리를 덤프해서 디버깅할 수 있습니다.
+- 보이는 채팅방 목록을 읽고 로컬 채팅 레지스트리를 갱신합니다.
+- 특정 채팅방에 특정 메시지를 보내거나, 드라이런으로 전송 직전 흐름만 검증합니다.
+- 같은 공유 코어를 사용하는 네이티브 AppKit 메뉴 막대 앱과 MCP 서버를 제공합니다.
 
-## How it works
+## 동작 방식
 
-`katalk-ax` uses documented macOS APIs only:
+`katalk-ax`는 공식 macOS API만 사용합니다.
 
 - `AXUIElementCreateApplication`
 - `AXUIElementCopyAttributeValue`
@@ -24,155 +24,153 @@
 - `NSPasteboard`
 - `CGEvent`
 
-It does **not** use:
+다음 방식은 사용하지 않습니다.
 
 - Kakao API
-- LOCO or any unofficial KakaoTalk protocol
-- reverse engineering
+- LOCO 같은 비공식 프로토콜
+- 리버스 엔지니어링
 - OCR
-- screenshots for click targeting
-- direct database reads
-- network hooking
-- fixed screen coordinates
+- 스크린샷 좌표 클릭
+- DB 직접 읽기
+- 네트워크 후킹
+- 고정 좌표 자동화
 
-## Safety policy
+## 안전 정책
 
-- Default match mode is `exact`.
-- If a chat name is ambiguous, the tool fails closed and returns candidates instead of sending.
-- `--dry-run` stops before the actual send.
-- `--confirm` asks for a terminal confirmation before sending.
-- `--speed slow` and normal pacing help reduce aggressive interaction patterns.
+- 기본 매칭 방식은 `exact`입니다.
+- 채팅방 이름이 모호하면 전송하지 않고 후보만 보여줍니다.
+- `--dry-run`은 실제 전송 전에 중단합니다.
+- `--confirm`은 전송 전에 터미널 확인을 받습니다.
+- `--speed slow`와 기본 지연은 과도한 자동화를 줄이기 위한 안전 장치입니다.
 
-## Requirements
+## 요구 사항
 
-- macOS 14+ on Apple Silicon (arm64)
-- Swift 5.9+ (tested here with Swift 6.2)
-- `KakaoTalk.app` installed on the same Mac
-- KakaoTalk already logged in and unlocked
-- Accessibility permission granted to the exact execution host
+- Apple Silicon(arm64) 기반 macOS 14+
+- Swift 5.9+ (현재 환경에서는 Swift 6.2로 검증)
+- 같은 Mac에 설치된 `KakaoTalk.app`
+- 로그인 및 잠금 해제가 완료된 KakaoTalk
+- 실제 실행 주체에 부여된 접근성 권한
 
-## Accessibility permission setup
+## 접근성 권한 설정
 
-Accessibility permission is granted **per execution host**. If you run `katalk-ax` from Terminal, iTerm, Warp, VS Code integrated terminal, Cursor, or another wrapper app, that host needs permission.
+접근성 권한은 **실행 주체별**로 필요합니다. 예를 들어 Terminal, iTerm, Warp, Cursor, VS Code 통합 터미널 등에서 실행하면 그 주체 각각에 권한이 있어야 합니다.
 
-1. Open **System Settings**
-2. Go to **Privacy & Security > Accessibility**
-3. Enable permission for the process that runs `katalk-ax`
-4. Re-run `katalk-ax status --prompt` if you want macOS to show the permission prompt flow
+1. **시스템 설정** 열기
+2. **개인정보 보호 및 보안 > 손쉬운 사용**으로 이동
+3. `katalk-ax`를 실행하는 앱/터미널에 권한 부여
+4. 필요하면 `katalk-ax status --prompt`로 권한 요청 흐름 다시 실행
 
-If permission is missing, `katalk-ax` exits with code `2`.
+권한이 없으면 `katalk-ax`는 종료 코드 `2`로 끝납니다.
 
-## Quick setup
-
-For a local first-run setup:
+## 빠른 시작
 
 ```bash
 chmod +x scripts/quick-setup.sh
 scripts/quick-setup.sh
 ```
 
-That script:
+이 스크립트는 다음을 수행합니다.
 
-- builds the CLI, MCP server, and menu bar app targets
-- creates `~/.katalk-ax/ai-providers.json` from the sample file if needed
-- opens the macOS Accessibility settings pane
-- prints the next local verification steps
+- CLI, MCP 서버, 메뉴 막대 앱 빌드
+- 필요하면 `~/.katalk-ax/ai-providers.json` 생성
+- 접근성 설정 창 열기
+- 다음 실행 절차 출력
 
-## Build
+로컬 설치본은 기본적으로 강제 ad-hoc 서명 없이 빌드합니다. 그래야 `~/Applications/katalk-ax.app`를 같은 경로로 덮어쓸 때 접근성 권한이 더 안정적으로 유지됩니다. 별도 서명이 필요하면 `KATALK_AX_SIGN_IDENTITY` 환경 변수를 지정해 명시적으로 서명할 수 있습니다.
+
+## 빌드
 
 ```bash
 swift build
 ```
 
-Build the native menu bar app target too:
+메뉴 막대 앱 타깃 빌드:
 
 ```bash
 swift build --product katalk-ax-menu-bar
 ```
 
-Build the MCP server target too:
+MCP 서버 타깃 빌드:
 
 ```bash
 swift build --product katalk-ax-mcp
 ```
 
-Release build:
+릴리즈 빌드:
 
 ```bash
 swift build -c release
 ```
 
-## Run
+## 실행
 
-Show status:
+상태 확인:
 
 ```bash
 swift run katalk-ax status
 swift run katalk-ax status --json
 ```
 
-Launch the native AppKit menu bar app:
+네이티브 AppKit 메뉴 막대 앱 실행:
 
 ```bash
 swift run katalk-ax-menu-bar
 ```
 
-The menu bar app uses a left-click popover for the main workflow and a right-click utility menu for refresh, settings, and quit. It calls `KTalkAXService` directly instead of shelling out to the CLI.
+이 메뉴 막대 앱은 좌클릭 팝오버와 우클릭 유틸리티 메뉴를 사용하며, CLI를 호출하지 않고 `KTalkAXService`를 직접 사용합니다. 팝오버를 열면 설정 요약이 아니라 **채팅방 이름 입력 → 메시지 입력 → 드라이런/전송** 흐름이 바로 보이도록 구성되어 있습니다.
 
-Current release artifacts are Apple Silicon only. Intel Macs are not supported by the published DMG or Homebrew install path in this repository.
-
-Run the MCP server over stdio:
+MCP 서버 실행:
 
 ```bash
 swift run katalk-ax-mcp
 ```
 
-Inspect a KakaoTalk window:
+접근성 트리 확인:
 
 ```bash
 swift run katalk-ax inspect --depth 5 --show-path --show-frame --show-flags
 swift run katalk-ax inspect --window 0 --depth 6 --show-actions --show-attributes --row-summary --json
 ```
 
-List chat candidates:
+채팅방 목록 확인:
 
 ```bash
 swift run katalk-ax chats --limit 30
 swift run katalk-ax chats --limit 30 --json
 ```
 
-Dry-run a send:
+특정 채팅방에 특정 메시지 드라이런:
 
 ```bash
 swift run katalk-ax send --chat "홍길동" --message "테스트 메시지" --dry-run
 ```
 
-Real send with confirmation:
+실제 전송(확인 포함):
 
 ```bash
-swift run katalk-ax send --chat "홍길동" --message "안녕하세요\n두 줄 메시지" --confirm --trace-ax
+swift run katalk-ax send --chat "홍길동" --message "안녕하세요
+두 줄 메시지" --confirm --trace-ax
 ```
 
-## Native menu bar app
+## 네이티브 메뉴 막대 앱
 
-The `katalk-ax-menu-bar` executable is a native AppKit status item app built on the same `KTalkAXCore` package as the CLI.
+`katalk-ax-menu-bar`는 CLI와 같은 `KTalkAXCore`를 재사용하는 AppKit 기반 상태 메뉴 앱입니다.
 
-It includes:
+포함된 기능:
 
-- `NSStatusItem` menu bar presence with a utility right-click menu
-- a main popover for automation status, visible chat loading, optional AI draft/rewrite assist, message compose, dry-run, and send
-- inline feedback for KakaoTalk availability, permission, AI provider readiness, and send results
-- a settings window for menu bar defaults such as match mode, speed, post-send window behavior, and default AI provider selection
+- `NSStatusItem` 기반 메뉴 막대 아이콘
+- 채팅방 이름 입력, 메시지 입력, 드라이런, 전송을 바로 수행하는 메인 팝오버
+- 필요할 때 참고할 수 있는 보이는 채팅방 목록과 간단한 상태 피드백
+- 권한 상태, KakaoTalk 상태, AI 설정 여부에 대한 인라인 피드백
+- 매칭 방식, 속도, 전송 후 창 유지 여부, 기본 AI 제공자를 설정하는 별도 설정 창
 
-The menu bar app keeps the same safety posture as the CLI: it uses the shared `KTalkAXService`, respects ambiguity blocking, and clearly separates dry-run from real send.
+이제 패키징된 `.app`는 `scripts/build-menu-bar-app.sh` 실행 중 `.icns`를 코드로 생성해서 번들에 포함합니다. 따라서 Finder/DMG에서도 실제 앱 아이콘이 보입니다.
 
-AI drafting in the menu bar app reuses the shared provider layer under `Sources/KTalkAX/AI/`. Providers are loaded from `~/.katalk-ax/ai-providers.json` or the supported `GEMINI_API_KEY` / `OPENAI_API_KEY` environment variables. If no provider is configured, the popover stays usable and shows inline setup guidance instead of failing.
+## AI 설정
 
-## AI setup
+AI 기능은 선택 사항입니다. KakaoTalk 자동화 자체는 AI 없이도 동작합니다.
 
-The project keeps AI optional. KakaoTalk automation works without any AI provider configured.
-
-### Option A: environment variables
+### 방법 1: 환경 변수
 
 Gemini:
 
@@ -181,7 +179,7 @@ export GEMINI_API_KEY="your-key"
 export GEMINI_MODEL="gemini-1.5-flash"
 ```
 
-OpenAI-compatible:
+OpenAI 호환 API:
 
 ```bash
 export OPENAI_API_KEY="your-token"
@@ -189,9 +187,9 @@ export OPENAI_MODEL="gpt-4.1-mini"
 export OPENAI_BASE_URL="https://api.openai.com/v1"
 ```
 
-### Option B: local config file
+### 방법 2: 로컬 설정 파일
 
-Create `~/.katalk-ax/ai-providers.json`:
+`~/.katalk-ax/ai-providers.json` 파일 생성:
 
 ```json
 {
@@ -211,36 +209,36 @@ Create `~/.katalk-ax/ai-providers.json`:
 }
 ```
 
-A ready-to-edit sample file is also included at `packaging/examples/ai-providers.sample.json`.
+샘플 파일은 `packaging/examples/ai-providers.sample.json`에도 들어 있습니다.
 
-Notes:
+참고:
 
-- The current implementation supports documented token-based provider access.
-- Codex-style product OAuth is not hard-coded into the app because public embeddable OAuth endpoints are not documented as a stable third-party integration surface.
-- The menu bar app can still use OpenAI-compatible bearer tokens and Gemini keys through the shared AI layer.
+- 현재 구현은 문서화된 토큰 기반 제공자 연결만 지원합니다.
+- Codex 스타일 제품 OAuth는 공개된 안정적인 임베디드 연동 표면이 없어 앱에 하드코딩하지 않았습니다.
+- 대신 Gemini 키나 OpenAI 호환 토큰을 같은 공유 AI 계층으로 사용할 수 있습니다.
 
-## CLI commands
+## CLI 명령어
 
 ### `status`
 
-Reports:
+다음을 확인합니다.
 
-- Accessibility trust state
-- KakaoTalk running state
-- active window count
-- login / lock estimate
-- cache and registry file paths
+- 접근성 권한 상태
+- KakaoTalk 실행 상태
+- 활성 창 개수
+- 로그인/잠금 추정 상태
+- 캐시/레지스트리 경로
 
-Options:
+옵션:
 
 - `--json`
 - `--prompt`
 
 ### `inspect`
 
-Dumps the Accessibility tree for a KakaoTalk window.
+KakaoTalk 창의 접근성 트리를 덤프합니다.
 
-Options:
+옵션:
 
 - `--window <index>`
 - `--depth <n>`
@@ -254,13 +252,11 @@ Options:
 - `--row-summary`
 - `--json`
 
-Each node can include role, title, value, description, subrole, frame, path, sibling index, enabled/focused/selected/editable flags, actions, and attribute names.
-
 ### `chats`
 
-Prints visible chat candidates that can be reached from the current KakaoTalk UI and refreshes the local registry.
+현재 보이는 채팅방 후보를 읽고 로컬 레지스트리를 갱신합니다.
 
-Options:
+옵션:
 
 - `--limit <n>`
 - `--json`
@@ -269,12 +265,14 @@ Options:
 
 ### `send`
 
-Required:
+특정 채팅방에 특정 메시지를 보냅니다. `--dry-run`을 사용하면 실제 전송 없이 열기/입력 가능 여부까지만 검증합니다.
 
-- `--message "<text>"`
-- one of `--chat "<chat name>"` or `--chat-id "<synthetic id>"`
+필수:
 
-Options:
+- `--message "<메시지>"`
+- `--chat "<채팅방 이름>"` 또는 `--chat-id "<synthetic id>"`
+
+옵션:
 
 - `--chat-id "<synthetic id>"`
 - `--dry-run`
@@ -288,58 +286,16 @@ Options:
 - `--refresh-cache`
 - `--no-cache`
 
-When `--keep-window` is omitted, `katalk-ax` attempts to close the opened chat window after a dry-run or verified send. When it is present, the chat window stays open.
+## MCP
 
-## Cache and registry
+`katalk-ax-mcp`는 stdio 기반 MCP 서버입니다. 공유 코어를 그대로 재사용하며 다음 도구를 제공합니다.
 
-- AX path cache: `~/.katalk-ax/ax-cache.json`
-- chat registry: `~/.katalk-ax/chat-registry.json`
+- `katalk_status`
+- `katalk_chats`
+- `katalk_inspect`
+- `katalk_send`
 
-The path cache stores the most recent successful route to the search field, result list, compose field, and send button. If the stored path no longer validates, the tool falls back to a fresh traversal. The chat registry stores synthetic chat IDs, normalized titles, first/last seen times, and matched text hints.
-
-## Exit codes
-
-- `0` success
-- `1` generic error
-- `2` Accessibility permission denied
-- `3` KakaoTalk not available
-- `4` chat not found
-- `5` ambiguous chat
-- `6` compose field not found
-- `7` send failed
-- `8` verification failed
-- `9` invalid arguments
-
-## Common errors and fixes
-
-### Accessibility permission denied
-
-Grant permission to the exact host process that launches `katalk-ax`.
-
-### KakaoTalk not available
-
-Install `KakaoTalk.app` in `/Applications` or ensure it is already running and visible through `NSWorkspace`.
-
-### Login required / app locked
-
-Open KakaoTalk manually, verify it is logged in, and unlock any lock screen before running the tool.
-
-### Ambiguous chat
-
-Use `chats --json` to inspect candidates, then retry with a more specific chat name or a known `--chat-id`.
-
-### Compose field not found
-
-Run `inspect --show-path --show-frame --show-flags --debug-layout` to capture the current AX tree and compare the lower-half editable controls.
-
-## Privacy and security notes
-
-- The tool runs locally and stores only a small cache and chat registry on disk.
-- It does not read KakaoTalk databases or intercept network traffic.
-- It can still trigger sends in the real KakaoTalk UI, so use `--dry-run` and `--confirm` for high-risk cases.
-- Keep test messages and screenshots free of personal data before sharing logs publicly.
-
-## Folder structure
+## 폴더 구조
 
 ```text
 Sources/KTalkAX/
@@ -349,10 +305,12 @@ Sources/KTalkAX/
   App/
   Input/
   AI/
+Sources/KTalkAXCLI/
 Sources/KTalkAXMenuBarApp/
 Sources/KTalkAXMenuBar/
 Sources/KTalkAXMCP/
 packaging/macos/
+packaging/examples/
 Formula/
 Casks/
 scripts/
@@ -362,82 +320,35 @@ Tests/KTalkAXMenuBarTests/
 docs/changes/
 ```
 
-## Architecture overview
+## 배포
 
-- `CLI`: argument parsing and command dispatch
-- `KTalkAXMenuBarApp`: native AppKit controllers, status item, popover, and settings window
-- `KTalkAXMenuBar`: thin executable entry point for the menu bar app
-- `KTalkAXMCP`: stdio MCP server over the shared core service
-- `Core`: errors, logging, output rendering, timeout helpers, normalization, scoring
-- `AX`: raw Accessibility wrappers, traversal, inspection, action helpers
-- `App`: KakaoTalk-specific process, window, search, compose, send, recovery, cache, registry logic
-- `AI`: optional provider abstraction and HTTP integrations for AI drafting
-- `Input`: keyboard, mouse, and pasteboard fallbacks
-
-## Development principles
-
-- fail closed on ambiguity
-- prefer semantic AX interactions over synthetic input
-- use synthetic keyboard and mouse only as fallbacks
-- keep tracing on `stderr` and primary results on `stdout`
-- keep docs and tests aligned with actual behavior
-
-## Testing
-
-Run unit tests:
-
-```bash
-swift test
-```
-
-Run a manual smoke check:
-
-```bash
-swift run katalk-ax status --json
-swift run katalk-ax inspect --depth 3 --show-path
-swift run katalk-ax chats --limit 10
-swift run katalk-ax send --chat "테스트" --message "smoke" --dry-run
-```
-
-## Manual test checklist
-
-- [ ] 1:1 chat exact match send
-- [ ] group chat exact match send
-- [ ] ambiguous duplicate-ish chat name blocks send
-- [ ] smart match handles spacing or punctuation differences
-- [ ] multiline message send
-- [ ] Korean message send
-- [ ] dry-run stops before send
-- [ ] confirm rejection prevents send
-- [ ] KakaoTalk launches when initially not running
-- [ ] locked KakaoTalk returns a clear error
-- [ ] corrupted cache recovers with `--refresh-cache`
-- [ ] inspect output is useful for debugging
-
-## CI
-
-The repository includes:
-
-- `swift.yml` for build/test on `push` and `pull_request`
-- `release.yml` for tagged builds that produce a CLI archive and a DMG
-
-Local release helpers:
+로컬 앱 번들 생성:
 
 ```bash
 scripts/build-menu-bar-app.sh release
+```
+
+DMG 생성:
+
+```bash
 scripts/create-dmg.sh dist/katalk-ax.app dist/katalk-ax.dmg
 ```
 
-The release workflow is intentionally unsigned by default. If you add Developer ID signing and notarization secrets later, the DMG flow is ready to extend.
+GitHub Actions:
 
-## Homebrew
+- `swift.yml`: 빌드/테스트
+- `release.yml`: DMG와 CLI 아카이브 릴리즈
 
-This repo includes Homebrew tap artifacts at the repository root:
+현재 공개 릴리즈 자산은 Apple Silicon 전용입니다.
 
-- `Formula/katalk-ax.rb` for the released CLI and MCP archive
-- `Casks/katalk-ax-menu-bar.rb` for the latest DMG-installed AppKit app release
+## Homebrew 설치
 
-Recommended install flow:
+이 저장소는 Homebrew 탭 루트 구조를 사용합니다.
+
+- `Formula/katalk-ax.rb`
+- `Casks/katalk-ax-menu-bar.rb`
+
+설치 예시:
 
 ```bash
 brew tap bssm-oss/kakao-talk-auto-bot-mac https://github.com/bssm-oss/kakao-talk-auto-bot-mac
@@ -445,33 +356,32 @@ brew install bssm-oss/kakao-talk-auto-bot-mac/katalk-ax
 brew install --cask bssm-oss/kakao-talk-auto-bot-mac/katalk-ax-menu-bar
 ```
 
-Notes:
+참고:
 
-- The custom tap URL is required because the repository is not named with Homebrew's default `homebrew-<tap>` convention.
-- The formula installs the released CLI archive directly, so it does not require a local Xcode build.
-- The cask points at the latest GitHub release DMG.
-- The current repository already publishes that DMG path through the live GitHub release flow.
-- Update the formula version and SHA when publishing a new CLI archive release.
-- Both the formula archive and the DMG currently target Apple Silicon (arm64) only.
+- 저장소 이름이 `homebrew-<tap>` 형식이 아니므로 커스텀 tap URL이 필요합니다.
+- formula는 릴리즈된 CLI/MCP 아카이브를 직접 설치합니다.
+- cask는 최신 GitHub 릴리즈 DMG를 사용합니다.
+- 공개된 DMG와 Homebrew 설치 경로는 현재 Apple Silicon 전용입니다.
 
-## Known limitations
+## 수동 테스트 체크리스트
 
-- Published release artifacts are Apple Silicon only.
-- KakaoTalk’s Accessibility tree can change between versions.
-- Some controls may not expose writable AX values, which forces pasteboard or keyboard fallback.
-- Post-send verification is conservative and may fail closed when transcript evidence is incomplete.
-- The tool cannot grant Accessibility permission on the user’s behalf.
+- [ ] 1:1 채팅방 exact match 전송
+- [ ] 그룹 채팅 exact match 전송
+- [ ] 비슷한 이름의 채팅방이 여러 개일 때 ambiguous 차단 확인
+- [ ] 공백/특수문자 차이가 있는 채팅방 smart match 확인
+- [ ] 여러 줄 메시지 전송
+- [ ] 한글 메시지 전송
+- [ ] dry-run 동작 확인
+- [ ] confirm 거부 시 미전송 확인
+- [ ] KakaoTalk 미실행 상태에서 자동 실행 확인
+- [ ] KakaoTalk 잠금 상태 오류 확인
+- [ ] 캐시 손상 후 `--refresh-cache` 복구 확인
+- [ ] inspect 출력 확인
 
-## References
+## 알려진 제한 사항
 
-- Apple Accessibility trust check: <https://developer.apple.com/documentation/applicationservices/1459186-axisprocesstrustedwithoptions>
-- Apple AX root creation: <https://developer.apple.com/documentation/applicationservices/1459374-axuielementcreateapplication>
-- Apple AX attribute reads: <https://developer.apple.com/documentation/applicationservices/1462085-axuielementcopyattributevalue>
-- Apple AX attribute writes: <https://developer.apple.com/documentation/applicationservices/1460434-axuielementsetattributevalue>
-- Apple AX actions: <https://developer.apple.com/documentation/applicationservices/1462091-axuielementperformaction>
-- Apple AX observer API: <https://developer.apple.com/documentation/applicationservices/1460133-axobservercreate>
-- Apple NSWorkspace / NSRunningApplication docs
-- Apple NSPasteboard docs
-- Apple CGEvent docs
-- AXSwift: <https://github.com/tmandry/AXSwift>
-- DFAXUIElement: <https://github.com/DevilFinger/DFAXUIElement>
+- 공개 릴리즈 자산은 현재 Apple Silicon(arm64) 전용입니다.
+- KakaoTalk의 접근성 트리는 버전에 따라 달라질 수 있습니다.
+- 일부 컨트롤은 쓰기 가능한 AX 값을 노출하지 않아 pasteboard/keyboard fallback이 필요할 수 있습니다.
+- 전송 검증은 보수적으로 동작하며, 증거가 부족하면 실패로 처리합니다.
+- 도구가 사용자를 대신해 접근성 권한을 부여할 수는 없습니다.
