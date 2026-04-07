@@ -1,9 +1,17 @@
 import AppKit
+import ApplicationServices
 import Foundation
 
 @MainActor
 public enum KTalkAXMenuBarLauncher {
     public static func run() {
+        if CommandLine.arguments.contains("--print-accessibility-status") {
+            let trusted = AXIsProcessTrustedWithOptions(["AXTrustedCheckOptionPrompt": false] as CFDictionary)
+            let payload = "{\"trusted\":\(trusted ? "true" : "false")}" + "\n"
+            FileHandle.standardOutput.write(Data(payload.utf8))
+            return
+        }
+
         let application = NSApplication.shared
         application.setActivationPolicy(.accessory)
 
