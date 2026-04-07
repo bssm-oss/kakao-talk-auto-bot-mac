@@ -11,6 +11,6 @@ do {
     FileHandle.standardError.write(Data((error.userFacingMessage + "\n").utf8))
     exit(error.exitCode.rawValue)
 } catch {
-    FileHandle.standardError.write(Data(("Unexpected error: \(error.localizedDescription)\n").utf8))
+    FileHandle.standardError.write(Data(("예상하지 못한 오류: \(error.localizedDescription)\n").utf8))
     exit(ExitCode.genericError.rawValue)
 }

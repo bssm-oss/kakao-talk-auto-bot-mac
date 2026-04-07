@@ -29,7 +29,7 @@ public struct CLIArgumentParser {
         case "send":
             return .send(try parseSend(tokens: tokens))
         default:
-            throw KTalkAXError.invalidArguments("Unknown command '\(commandName)'.\n\n\(helpText())")
+            throw KTalkAXError.invalidArguments("알 수 없는 명령어 '\(commandName)'입니다.\n\n\(helpText())")
         }
     }
 
@@ -66,7 +66,7 @@ public struct CLIArgumentParser {
             case "--row-summary": rowSummary = true
             case "--json": json = true
             default:
-                throw KTalkAXError.invalidArguments("Unknown inspect option '\(token)'.")
+                throw KTalkAXError.invalidArguments("알 수 없는 inspect 옵션 '\(token)'입니다.")
             }
             index += 1
         }
@@ -103,7 +103,7 @@ public struct CLIArgumentParser {
             case "--refresh-cache": refreshCache = true
             case "--no-cache": noCache = true
             default:
-                throw KTalkAXError.invalidArguments("Unknown chats option '\(token)'.")
+                throw KTalkAXError.invalidArguments("알 수 없는 chats 옵션 '\(token)'입니다.")
             }
             index += 1
         }
@@ -148,30 +148,30 @@ public struct CLIArgumentParser {
                 index += 1
                 let value = try readString(tokens, index: index, name: "--match")
                 guard let parsed = ChatMatchMode(rawValue: value) else {
-                    throw KTalkAXError.invalidArguments("Invalid --match value '\(value)'.")
+                    throw KTalkAXError.invalidArguments("잘못된 --match 값 '\(value)'입니다.")
                 }
                 matchMode = parsed
             case "--speed":
                 index += 1
                 let value = try readString(tokens, index: index, name: "--speed")
                 guard let parsed = SendSpeed(rawValue: value) else {
-                    throw KTalkAXError.invalidArguments("Invalid --speed value '\(value)'.")
+                    throw KTalkAXError.invalidArguments("잘못된 --speed 값 '\(value)'입니다.")
                 }
                 speed = parsed
             case "--json": json = true
             case "--refresh-cache": refreshCache = true
             case "--no-cache": noCache = true
             default:
-                throw KTalkAXError.invalidArguments("Unknown send option '\(token)'.")
+                throw KTalkAXError.invalidArguments("알 수 없는 send 옵션 '\(token)'입니다.")
             }
             index += 1
         }
 
         if (chat == nil || chat?.isEmpty == true), chatID == nil {
-            throw KTalkAXError.invalidArguments("send requires --chat \"<chat name>\" or --chat-id \"<synthetic id>\".")
+            throw KTalkAXError.invalidArguments("send 명령은 --chat \"<채팅방 이름>\" 또는 --chat-id \"<synthetic id>\"가 필요합니다.")
         }
         guard let message else {
-            throw KTalkAXError.invalidArguments("send requires --message \"<message>\".")
+            throw KTalkAXError.invalidArguments("send 명령은 --message \"<메시지>\"가 필요합니다.")
         }
 
         return SendCommand(
@@ -193,7 +193,7 @@ public struct CLIArgumentParser {
 
     private func readString(_ tokens: [String], index: Int, name: String) throws -> String {
         guard tokens.indices.contains(index) else {
-            throw KTalkAXError.invalidArguments("Missing value for \(name).")
+            throw KTalkAXError.invalidArguments("\(name)의 값이 없습니다.")
         }
         return tokens[index]
     }
@@ -201,16 +201,16 @@ public struct CLIArgumentParser {
     private func readInt(_ tokens: [String], index: Int, name: String) throws -> Int {
         let value = try readString(tokens, index: index, name: name)
         guard let integer = Int(value) else {
-            throw KTalkAXError.invalidArguments("Expected integer value for \(name), got '\(value)'.")
+            throw KTalkAXError.invalidArguments("\(name)에는 정수가 필요하지만 '\(value)'가 들어왔습니다.")
         }
         return integer
     }
 
     public func helpText() -> String {
         """
-        katalk-ax - KakaoTalk macOS Accessibility CLI
+        katalk-ax - KakaoTalk macOS 접근성 CLI
 
-        Commands:
+        명령어:
           status [--json] [--prompt]
           inspect [--window <index>] [--depth <n>] [--show-attributes] [--show-actions] [--show-path] [--show-frame] [--show-index] [--show-flags] [--debug-layout] [--row-summary] [--json]
           chats [--limit <n>] [--json] [--refresh-cache] [--no-cache]

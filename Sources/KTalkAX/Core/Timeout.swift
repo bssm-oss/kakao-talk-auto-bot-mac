@@ -14,7 +14,7 @@ enum Timeout {
             }
             Thread.sleep(forTimeInterval: interval)
         }
-        throw KTalkAXError.timeout("Timed out while waiting for \(label).")
+        throw KTalkAXError.timeout("\(label)을(를) 기다리다가 시간이 초과되었습니다.")
     }
 
     static func sleep(for speed: SendSpeed, base: TimeInterval = 0.15) {

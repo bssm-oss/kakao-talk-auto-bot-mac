@@ -90,10 +90,10 @@ extension KTalkAXError {
              .locked(let message):
             return message
         case .notTrusted:
-            return "Accessibility permission is not granted for the current process. Enable it in System Settings > Privacy & Security > Accessibility, then rerun katalk-ax."
+            return "현재 실행 중인 프로세스에 접근성 권한이 없습니다. 시스템 설정 > 개인정보 보호 및 보안 > 손쉬운 사용에서 권한을 켠 뒤 katalk-ax를 다시 실행하세요."
         case .ambiguousMatch(let query, let candidates):
             let names = candidates.prefix(5).map { "\($0.title) [\($0.chatID)] score=\($0.score)" }.joined(separator: ", ")
-            return "Chat name '\(query)' is ambiguous. No message was sent. Candidates: \(names)"
+            return "채팅방 이름 '\(query)'이(가) 모호해서 메시지를 보내지 않았습니다. 후보: \(names)"
         }
     }
 }
