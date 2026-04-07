@@ -35,9 +35,7 @@ plutil -replace CFBundleVersion -string "${KATALK_AX_BUILD_NUMBER:-4}" "$APP_DIR
 if [[ -n "${KATALK_AX_SIGN_IDENTITY:-}" ]]; then
   codesign --force --deep --sign "$KATALK_AX_SIGN_IDENTITY" "$APP_DIR"
 else
-  echo "Skipping codesign for local build to keep app identity stable across updates"
-  codesign --remove-signature "$APP_DIR/Contents/MacOS/$EXECUTABLE_NAME" 2>/dev/null || true
-  codesign --remove-signature "$APP_DIR" 2>/dev/null || true
+  codesign --force --deep --sign - "$APP_DIR"
 fi
 
 echo "$APP_DIR"
