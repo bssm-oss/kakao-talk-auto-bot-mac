@@ -9,7 +9,7 @@ public struct OpenAICompatibleAIProvider: AIProvider {
 
     public func compose(request: AIComposeRequest) async throws -> AIComposeResult {
         guard let token = configuration.authToken, !token.isEmpty else {
-            throw KTalkAXError.invalidArguments("OpenAI-compatible auth token is not configured.")
+            throw KTalkAXError.invalidArguments("OpenAI 호환 인증 토큰이 설정되어 있지 않습니다.")
         }
         let model = configuration.model
         let baseURL = configuration.baseURL ?? "https://api.openai.com/v1"
@@ -66,6 +66,6 @@ private struct OpenAICompatibleResponse: Decodable {
 private func validateOpenAICompatibleHTTP(response: URLResponse, data: Data) throws {
     guard let http = response as? HTTPURLResponse, 200..<300 ~= http.statusCode else {
         let body = String(decoding: data, as: UTF8.self)
-        throw KTalkAXError.generic("OpenAI-compatible provider request failed: \(body)")
+        throw KTalkAXError.generic("OpenAI 호환 제공자 요청이 실패했습니다: \(body)")
     }
 }

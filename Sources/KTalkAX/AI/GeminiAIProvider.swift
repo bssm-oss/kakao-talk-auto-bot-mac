@@ -9,7 +9,7 @@ public struct GeminiAIProvider: AIProvider {
 
     public func compose(request: AIComposeRequest) async throws -> AIComposeResult {
         guard let apiKey = configuration.apiKey, !apiKey.isEmpty else {
-            throw KTalkAXError.invalidArguments("Gemini API key is not configured.")
+            throw KTalkAXError.invalidArguments("Gemini API 키가 설정되어 있지 않습니다.")
         }
         let model = configuration.model
         let url = URL(string: "https://generativelanguage.googleapis.com/v1beta/models/\(model):generateContent?key=\(apiKey)")!
@@ -62,6 +62,6 @@ private struct GeminiResponse: Decodable {
 private func validateHTTP(response: URLResponse, data: Data) throws {
     guard let http = response as? HTTPURLResponse, 200..<300 ~= http.statusCode else {
         let body = String(decoding: data, as: UTF8.self)
-        throw KTalkAXError.generic("AI provider request failed: \(body)")
+        throw KTalkAXError.generic("AI 제공자 요청이 실패했습니다: \(body)")
     }
 }

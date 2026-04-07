@@ -30,7 +30,7 @@ public final class AIComposerService: @unchecked Sendable {
 
     public func compose(using provider: AIProviderKind, request: AIComposeRequest) async throws -> AIComposeResult {
         guard let providerImpl = providers[provider] else {
-            throw KTalkAXError.invalidArguments("AI provider \(provider.rawValue) is not configured.")
+            throw KTalkAXError.invalidArguments("AI 제공자 \(provider.rawValue)가 설정되어 있지 않습니다.")
         }
         return try await providerImpl.compose(request: request)
     }

@@ -110,7 +110,7 @@ struct KTalkAXMCPMain {
             )
             return String(decoding: try encoder.encode(result), as: UTF8.self)
         default:
-            throw KTalkAXError.invalidArguments("Unknown tool \(name)")
+            throw KTalkAXError.invalidArguments("알 수 없는 도구 \(name)입니다.")
         }
     }
 
