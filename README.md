@@ -159,6 +159,13 @@ swift run katalk-ax status
 swift run katalk-ax status --json
 ```
 
+간단 전송 CLI:
+
+```bash
+swift run kabot --room "허동운" --message "안녕"
+swift run kabot --room "허동운" --message "안녕" --dry-run
+```
+
 네이티브 AppKit 메뉴 막대 앱 실행:
 
 ```bash
@@ -191,6 +198,13 @@ swift run katalk-ax chats --limit 30 --json
 
 ```bash
 swift run katalk-ax send --chat "홍길동" --message "테스트 메시지" --dry-run
+```
+
+더 간단한 전송 예시:
+
+```bash
+kabot --room "허동운" --message "안녕"
+kabot --rome "허동운" --message "안녕" --dry-run
 ```
 
 실제 전송(확인 포함):
@@ -334,6 +348,28 @@ KakaoTalk 창의 접근성 트리를 덤프합니다.
 - `--refresh-cache`
 - `--no-cache`
 
+### `kabot`
+
+`kabot`은 전송에만 집중한 간단 CLI입니다. 내부적으로는 같은 공유 전송 코어를 사용합니다.
+
+필수:
+
+- `--room "<채팅방 이름>"` 또는 `--rome "<채팅방 이름>"`
+- `--message "<메시지>"`
+
+옵션:
+
+- `--dry-run`
+- `--json`
+- `--trace-ax`
+
+예시:
+
+```bash
+kabot --room "허동운" --message "안녕"
+kabot --rome "허동운" --message "안녕" --dry-run
+```
+
 ## MCP
 
 `katalk-ax-mcp`는 stdio 기반 MCP 서버입니다. 공유 코어를 그대로 재사용하며 다음 도구를 제공합니다.
@@ -342,6 +378,14 @@ KakaoTalk 창의 접근성 트리를 덤프합니다.
 - `katalk_chats`
 - `katalk_inspect`
 - `katalk_send`
+
+## Homebrew 설치 후 사용 가능한 바이너리
+
+Homebrew formula를 설치하면 다음 바이너리를 함께 사용할 수 있습니다.
+
+- `katalk-ax`
+- `kabot`
+- `katalk-ax-mcp`
 
 ## 폴더 구조
 
@@ -388,6 +432,12 @@ GitHub Actions:
 - `release.yml`: DMG와 CLI 아카이브 릴리즈
 
 현재 공개 릴리즈 자산은 Apple Silicon 전용입니다.
+
+바로 다운로드:
+
+- 최신 릴리즈 페이지: https://github.com/bssm-oss/kakao-talk-auto-bot-mac/releases/latest
+- 최신 DMG 직접 다운로드: https://github.com/bssm-oss/kakao-talk-auto-bot-mac/releases/latest/download/katalk-ax.dmg
+- 최신 CLI 아카이브 직접 다운로드: https://github.com/bssm-oss/kakao-talk-auto-bot-mac/releases/latest/download/katalk-ax-cli.tar.gz
 
 ## Homebrew 설치
 

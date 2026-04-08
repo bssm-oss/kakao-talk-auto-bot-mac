@@ -9,6 +9,7 @@ let package = Package(
     products: [
         .library(name: "KTalkAXCore", targets: ["KTalkAXCore"]),
         .executable(name: "katalk-ax", targets: ["KTalkAXCLI"]),
+        .executable(name: "kabot", targets: ["KabotCLI"]),
         .executable(name: "katalk-ax-menu-bar", targets: ["KTalkAXMenuBar"]),
         .executable(name: "katalk-ax-mcp", targets: ["KTalkAXMCP"])
     ],
@@ -21,6 +22,11 @@ let package = Package(
             name: "KTalkAXCLI",
             dependencies: ["KTalkAXCore"],
             path: "Sources/KTalkAXCLI"
+        ),
+        .executableTarget(
+            name: "KabotCLI",
+            dependencies: ["KTalkAXCore"],
+            path: "Sources/KabotCLI"
         ),
         .target(
             name: "KTalkAXMenuBarApp",

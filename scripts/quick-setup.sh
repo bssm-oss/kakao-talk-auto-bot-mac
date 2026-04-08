@@ -39,6 +39,7 @@ cat <<EOF
 - AI 초안 기능을 쓰려면 $AI_CONFIG 파일을 검토하고 수정하세요.
 - 실행 (앱 번들): open $ROOT_DIR/dist/katalk-ax-cli.app
 - 실행 (직접): swift run katalk-ax status --json
+- 간단 전송 CLI: swift run kabot --room "허동운" --message "안녕"
 - 실행: swift run katalk-ax-menu-bar
 - 실행: swift run katalk-ax-mcp
 - 로컬 앱 설치: $ROOT_DIR/scripts/install-local-app.sh

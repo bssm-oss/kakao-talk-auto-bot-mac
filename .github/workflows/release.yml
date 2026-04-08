@@ -21,7 +21,7 @@ jobs:
         run: sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
 
       - name: Build CLI and MCP
-        run: swift build -c release --product katalk-ax && swift build -c release --product katalk-ax-mcp
+        run: swift build -c release --product katalk-ax && swift build -c release --product kabot && swift build -c release --product katalk-ax-mcp
 
       - name: Build menu bar app bundle
         run: chmod +x scripts/build-menu-bar-app.sh && scripts/build-menu-bar-app.sh release
@@ -32,6 +32,7 @@ jobs:
       - name: Archive CLI binaries
         run: |
           mkdir -p dist/cli
+          cp .build/arm64-apple-macosx/release/kabot dist/cli/
           cp .build/arm64-apple-macosx/release/katalk-ax dist/cli/
           cp .build/arm64-apple-macosx/release/katalk-ax-mcp dist/cli/
           tar -czf dist/katalk-ax-cli.tar.gz -C dist/cli .
