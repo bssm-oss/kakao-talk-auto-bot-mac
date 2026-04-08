@@ -939,7 +939,7 @@ final class MainPopoverViewController: NSViewController, NSTableViewDataSource, 
         case "app_locked":
             return "카카오톡이 잠긴 상태로 보입니다. 먼저 잠금을 해제한 뒤 메뉴 막대 팝오버를 새로고침하세요."
         case "permission_denied":
-            return "메뉴 막대 앱이 카카오톡을 확인하거나 자동화하려면 먼저 접근성 권한이 필요합니다."
+            return "현재 설치된 ~/Applications/katalk-ax.app 기준으로 접근성 권한이 필요합니다. 설정에서 해당 항목을 켜고, 필요하면 권한 요청 버튼을 다시 눌러 주세요."
         case "not_running":
             return "현재 카카오톡이 실행 중이 아닙니다."
         default:
