@@ -41,5 +41,7 @@ cat <<EOF
 - 실행 (직접): swift run katalk-ax status --json
 - 실행: swift run katalk-ax-menu-bar
 - 실행: swift run katalk-ax-mcp
+- 로컬 앱 설치: $ROOT_DIR/scripts/install-local-app.sh
+- 권한 복구: $ROOT_DIR/scripts/repair-accessibility.sh
 - 진단: $ROOT_DIR/scripts/check-accessibility.sh
 EOF

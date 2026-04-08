@@ -97,11 +97,17 @@ open dist/katalk-ax-cli.app
 # 진단 스크립트 실행
 scripts/check-accessibility.sh
 
+# 로컬 앱을 최신으로 다시 설치
+scripts/install-local-app.sh
+
+# 현재 설치된 앱 기준으로 접근성 권한 재요청
+scripts/repair-accessibility.sh
+
 # 일반적 해결 방법:
 # 1. 기존 항목을 접근성 목록에서 제거
-# 2. 앱 번들을 다시 추가
-# 3. 터미널 재시작
-# 4. katalk-ax status --prompt 실행
+# 2. repair-accessibility.sh 실행
+# 3. 시스템 설정에서 현재 katalk-ax 앱 항목을 다시 켜기
+# 4. 앱/CLI를 다시 실행해 확인
 ```
 
 ## 빠른 시작
@@ -118,7 +124,7 @@ scripts/quick-setup.sh
 - 접근성 설정 창 열기
 - 다음 실행 절차 출력
 
-로컬 설치본은 기본적으로 강제 ad-hoc 서명 없이 빌드합니다. 그래야 `~/Applications/katalk-ax.app`를 같은 경로로 덮어쓸 때 접근성 권한이 더 안정적으로 유지됩니다. 별도 서명이 필요하면 `KATALK_AX_SIGN_IDENTITY` 환경 변수를 지정해 명시적으로 서명할 수 있습니다.
+로컬 설치본은 기본적으로 **고정된 로컬 코드 서명 identity**를 자동 생성해서 서명합니다. 그래야 `~/Applications/katalk-ax.app`를 같은 경로로 덮어쓸 때 접근성 권한이 더 안정적으로 유지됩니다. 별도 서명이 필요하면 `KATALK_AX_SIGN_IDENTITY` 환경 변수를 지정해 명시적으로 서명할 수 있습니다.
 
 ## 빌드
 

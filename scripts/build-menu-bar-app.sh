@@ -29,13 +29,17 @@ cp "$BUILD_DIR/$EXECUTABLE_NAME" "$APP_DIR/Contents/MacOS/$EXECUTABLE_NAME"
 cp "$ROOT_DIR/packaging/macos/Info.plist" "$APP_DIR/Contents/Info.plist"
 cp "$ICON_WORK_DIR/$ICON_NAME" "$APP_DIR/Contents/Resources/$ICON_NAME"
 
-plutil -replace CFBundleShortVersionString -string "${KATALK_AX_VERSION:-0.1.4}" "$APP_DIR/Contents/Info.plist"
-plutil -replace CFBundleVersion -string "${KATALK_AX_BUILD_NUMBER:-4}" "$APP_DIR/Contents/Info.plist"
+plutil -replace CFBundleShortVersionString -string "${KATALK_AX_VERSION:-0.1.5}" "$APP_DIR/Contents/Info.plist"
+plutil -replace CFBundleVersion -string "${KATALK_AX_BUILD_NUMBER:-5}" "$APP_DIR/Contents/Info.plist"
 
 if [[ -n "${KATALK_AX_SIGN_IDENTITY:-}" ]]; then
   codesign --force --deep --sign "$KATALK_AX_SIGN_IDENTITY" "$APP_DIR"
 else
-  codesign --force --deep --sign - "$APP_DIR"
+  if SIGN_IDENTITY=$("$ROOT_DIR/scripts/ensure-local-signing-identity.sh" 2>/dev/null); then
+    codesign --force --deep --sign "$SIGN_IDENTITY" "$APP_DIR"
+  else
+    codesign --force --deep --sign - "$APP_DIR"
+  fi
 fi
 
 echo "$APP_DIR"
