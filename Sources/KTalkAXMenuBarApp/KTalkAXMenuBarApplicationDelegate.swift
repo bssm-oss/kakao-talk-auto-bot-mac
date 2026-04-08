@@ -11,6 +11,7 @@ final class KTalkAXMenuBarApplicationDelegate: NSObject, NSApplicationDelegate {
     private var settingsWindowController: SettingsWindowController?
     private var popoverController: MainPopoverViewController?
     private var statusItemController: StatusItemController?
+    private var silentRefreshTimer: Timer?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         let settingsWindowController = SettingsWindowController(preferences: preferences, aiDraftWorkflow: aiDraftWorkflow)
@@ -38,6 +39,16 @@ final class KTalkAXMenuBarApplicationDelegate: NSObject, NSApplicationDelegate {
         self.settingsWindowController = settingsWindowController
         self.popoverController = popoverController
         self.statusItemController = statusItemController
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak popoverController] in
+            popoverController?.refreshStatusSilently()
+        }
+
+        silentRefreshTimer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { [weak popoverController] _ in
+            DispatchQueue.main.async {
+                popoverController?.refreshStatusSilently()
+            }
+        }
     }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
@@ -47,5 +58,10 @@ final class KTalkAXMenuBarApplicationDelegate: NSObject, NSApplicationDelegate {
 
     @objc func showSettings(_ sender: Any?) {
         settingsWindowController?.showWindowAndActivate()
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        silentRefreshTimer?.invalidate()
+        silentRefreshTimer = nil
     }
 }

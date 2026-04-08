@@ -1,4 +1,5 @@
 import AppKit
+import ApplicationServices
 @preconcurrency import Foundation
 import KTalkAXCore
 
@@ -36,6 +37,7 @@ final class MainPopoverViewController: NSViewController, NSTableViewDataSource, 
     private var availableAIProviders: [AIProviderKind] = []
     private var aiConversation: [AIChatTurn] = []
     private var hasLoadedOnce = false
+    private var hasTriggeredPermissionPrompt = false
     private var backgroundWorkBoxes: [BackgroundWorkBox] = []
     private var aiTask: Task<Void, Never>?
     private var isBusy = false {
@@ -131,6 +133,39 @@ final class MainPopoverViewController: NSViewController, NSTableViewDataSource, 
             hasLoadedOnce = true
         }
         refreshAll(trigger: .manual)
+    }
+
+    func refreshStatusSilently() {
+        guard !isBusy else { return }
+
+        let service = self.service
+        performBackgroundWork {
+            try service.status(promptForTrust: false)
+        } completion: { [weak self] result in
+            guard let self else { return }
+            switch result {
+            case .success(let status):
+                self.latestStatus = status
+                self.updateStatusSummary(
+                    headline: self.makeStatusHeadline(status: status),
+                    detail: self.makeStatusDetail(status: status),
+                    tint: self.makeStatusTint(status: status)
+                )
+                self.requestAccessButton.isHidden = status.permission.trusted
+                if !status.permission.trusted {
+                    self.triggerPermissionPromptIfNeeded()
+                }
+                self.publishStatusAppearance()
+            case .failure:
+                break
+            }
+        }
+    }
+
+    private func triggerPermissionPromptIfNeeded() {
+        guard !hasTriggeredPermissionPrompt else { return }
+        hasTriggeredPermissionPrompt = true
+        _ = AXIsProcessTrustedWithOptions(["AXTrustedCheckOptionPrompt": true] as CFDictionary)
     }
 
     func buildInterface() {
