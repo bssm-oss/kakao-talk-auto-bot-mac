@@ -1,9 +1,9 @@
 class KatalkAx < Formula
   desc "KakaoTalk macOS 접근성 CLI 자동화 도구"
   homepage "https://github.com/bssm-oss/kakao-talk-auto-bot-mac"
-  url "https://github.com/bssm-oss/kakao-talk-auto-bot-mac/releases/download/v0.1.4/katalk-ax-cli.tar.gz"
-  sha256 "77ac9d26f9de5a0b8c2834deb3a7611409093793b553ef4855ec72afd029bdeb"
-  version "0.1.4"
+  url "https://github.com/bssm-oss/kakao-talk-auto-bot-mac/releases/download/v0.1.5/katalk-ax-cli.tar.gz"
+  sha256 "ca2cb7a4fd5c305556225926574052d513f38dea9cfe8eb345667ed572a155b0"
+  version "0.1.5"
 
   depends_on :macos
   depends_on arch: :arm64
