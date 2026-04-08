@@ -5,7 +5,7 @@ IDENTITY_NAME="katalk-ax Local Signing"
 KEYCHAIN_PATH="$HOME/Library/Keychains/login.keychain-db"
 PKCS12_PASSWORD="katalk-ax-local-signing"
 
-EXISTING_IDENTITY=$(security find-identity -v -p codesigning "$KEYCHAIN_PATH" 2>/dev/null | grep "$IDENTITY_NAME" | head -n 1 | sed -E 's/.*"(.*)"/\1/' || true)
+EXISTING_IDENTITY=$(security find-certificate -Z -a -c "$IDENTITY_NAME" "$KEYCHAIN_PATH" 2>/dev/null | awk '/SHA-1 hash:/ { print $3; exit }' || true)
 if [[ -n "$EXISTING_IDENTITY" ]]; then
   printf '%s\n' "$EXISTING_IDENTITY"
   exit 0
@@ -38,7 +38,7 @@ openssl pkcs12 -legacy -export -inkey "$WORK_DIR/key.pem" -in "$WORK_DIR/cert.pe
 
 security import "$WORK_DIR/cert.p12" -k "$KEYCHAIN_PATH" -P "$PKCS12_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security >/dev/null
 
-NEW_IDENTITY=$(security find-identity -v -p codesigning "$KEYCHAIN_PATH" 2>/dev/null | grep "$IDENTITY_NAME" | head -n 1 | sed -E 's/.*"(.*)"/\1/' || true)
+NEW_IDENTITY=$(security find-certificate -Z -a -c "$IDENTITY_NAME" "$KEYCHAIN_PATH" 2>/dev/null | awk '/SHA-1 hash:/ { print $3; exit }' || true)
 if [[ -z "$NEW_IDENTITY" ]]; then
   echo "Failed to create local signing identity" >&2
   exit 1

@@ -29,8 +29,8 @@ cp "$BUILD_DIR/$EXECUTABLE_NAME" "$APP_DIR/Contents/MacOS/$EXECUTABLE_NAME"
 cp "$ROOT_DIR/packaging/macos/Info.plist" "$APP_DIR/Contents/Info.plist"
 cp "$ICON_WORK_DIR/$ICON_NAME" "$APP_DIR/Contents/Resources/$ICON_NAME"
 
-plutil -replace CFBundleShortVersionString -string "${KATALK_AX_VERSION:-0.1.6}" "$APP_DIR/Contents/Info.plist"
-plutil -replace CFBundleVersion -string "${KATALK_AX_BUILD_NUMBER:-6}" "$APP_DIR/Contents/Info.plist"
+plutil -replace CFBundleShortVersionString -string "${KATALK_AX_VERSION:-0.1.7}" "$APP_DIR/Contents/Info.plist"
+plutil -replace CFBundleVersion -string "${KATALK_AX_BUILD_NUMBER:-7}" "$APP_DIR/Contents/Info.plist"
 
 if [[ -n "${KATALK_AX_SIGN_IDENTITY:-}" ]]; then
   codesign --force --deep --sign "$KATALK_AX_SIGN_IDENTITY" "$APP_DIR"
