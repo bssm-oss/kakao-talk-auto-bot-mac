@@ -30,6 +30,7 @@ final class MainPopoverViewController: NSViewController, NSTableViewDataSource, 
     private let service: KTalkAXService
     private let preferences: AppPreferences
     private let aiDraftWorkflow: AIDraftWorkflow
+    private let statusRecorder = AccessibilityStatusRecorder()
 
     private var chats: [ChatSummaryResult] = []
     private var latestStatus: StatusResult?
@@ -146,6 +147,7 @@ final class MainPopoverViewController: NSViewController, NSTableViewDataSource, 
             switch result {
             case .success(let status):
                 self.latestStatus = status
+                self.statusRecorder.record(status: status)
                 self.updateStatusSummary(
                     headline: self.makeStatusHeadline(status: status),
                     detail: self.makeStatusDetail(status: status),
@@ -165,7 +167,9 @@ final class MainPopoverViewController: NSViewController, NSTableViewDataSource, 
     private func triggerPermissionPromptIfNeeded() {
         guard !hasTriggeredPermissionPrompt else { return }
         hasTriggeredPermissionPrompt = true
+        NSApp.activate(ignoringOtherApps: true)
         _ = AXIsProcessTrustedWithOptions(["AXTrustedCheckOptionPrompt": true] as CFDictionary)
+        NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!)
     }
 
     func buildInterface() {
@@ -491,7 +495,15 @@ final class MainPopoverViewController: NSViewController, NSTableViewDataSource, 
     }
 
     @objc private func handlePromptForTrust() {
-        refreshAll(trigger: .promptForTrust)
+        NSApp.activate(ignoringOtherApps: true)
+        let executablePath = Bundle.main.executableURL?.path ?? CommandLine.arguments[0]
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: executablePath)
+        process.arguments = ["--prompt-accessibility-status"]
+        try? process.run()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+            self?.refreshAll(trigger: .promptForTrust)
+        }
     }
 
     @objc private func handleOpenSettings() {
@@ -612,7 +624,7 @@ final class MainPopoverViewController: NSViewController, NSTableViewDataSource, 
 
         if !snapshot.status.permission.trusted {
             applyFeedback(
-                "메뉴 막대 앱을 실행하는 프로세스에 접근성 권한이 있어야 카카오톡 자동화를 사용할 수 있습니다.",
+                "현재 설치된 ~/Applications/katalk-ax.app 기준으로 접근성 권한이 필요합니다. 권한 요청 버튼을 누른 뒤, 시스템 설정에서 해당 항목을 켜 주세요. 현재 앱 진단 파일: \(statusRecorder.statusFilePath)",
                 kind: .error
             )
         } else if !snapshot.status.kakaoTalkRunning {
