@@ -153,6 +153,23 @@ final class KakaoTalkSearchUI {
         return nil
     }
 
+    func collectRowsInWindow(_ window: AXElement, sourceWindow: String, registry: KakaoTalkRegistry) throws -> [ChatRowCandidate] {
+        if let directTable = try directResultsContainer(in: window) ?? recursiveResultsContainer(from: window, depth: 0) {
+            return try collectRows(in: directTable, sourceWindow: sourceWindow, registry: registry)
+        }
+        let nodes = try AXTraversal.collect(root: window, strategy: .breadthFirst, maxDepth: 6, maxNodes: 500)
+        let rowElements = nodes.filter { $0.role == AXRoleNames.row }.map(\.element)
+        return try rowElements.compactMap { row in
+            let texts = try extractTexts(from: row)
+            guard let title = texts.first(where: TextNormalizer.likelyHumanReadable) else { return nil }
+            let existing = registry.entries().first { $0.title == title && $0.lastMatchedTexts == texts }
+            let chatID = existing?.chatID ?? "chat_\(UUID().uuidString.prefix(8))"
+            let unreadEstimate = texts.compactMap(Int.init).first
+            let metaEstimate = texts.first(where: { $0.range(of: "^[0-9]{1,2}:[0-9]{2}$", options: .regularExpression) != nil })
+            return ChatRowCandidate(chatID: chatID, title: title, sourceWindow: sourceWindow, matchableTexts: texts, unreadEstimate: unreadEstimate, metaEstimate: metaEstimate, rowElement: row)
+        }
+    }
+
     func collectRows(in container: AXElement, sourceWindow: String, registry: KakaoTalkRegistry) throws -> [ChatRowCandidate] {
         let rowElements = try fetchRows(in: container)
         return try rowElements.compactMap { row in
@@ -211,6 +228,43 @@ final class KakaoTalkSearchUI {
             if texts.contains(where: { TextNormalizer.normalize($0) == normalizedExpected }) {
                 return row
             }
+        }
+        return nil
+    }
+
+    func findDirectRowCandidate(named title: String, in window: AXElement, sourceWindow: String, registry: KakaoTalkRegistry) throws -> ChatRowCandidate? {
+        let normalizedExpected = TextNormalizer.normalize(title)
+        let strippedExpected = TextNormalizer.normalize(title, stripSeparators: true)
+        let rows = try findDirectTableRows(in: window) ?? []
+        for row in rows {
+            let texts = quickRowTexts(from: row)
+            guard let candidateTitle = texts.first(where: TextNormalizer.likelyHumanReadable) else { continue }
+            let matches = texts.contains { text in
+                let normalized = TextNormalizer.normalize(text)
+                let stripped = TextNormalizer.normalize(text, stripSeparators: true)
+                return normalized == normalizedExpected || stripped == strippedExpected
+            }
+            guard matches else { continue }
+            let existing = registry.entries().first { $0.title == candidateTitle && $0.lastMatchedTexts == texts }
+            let chatID = existing?.chatID ?? "chat_\(UUID().uuidString.prefix(8))"
+            let unreadEstimate = texts.compactMap(Int.init).first
+            let metaEstimate = texts.first(where: { $0.range(of: "^[0-9]{1,2}:[0-9]{2}$", options: .regularExpression) != nil })
+            return ChatRowCandidate(chatID: chatID, title: candidateTitle, sourceWindow: sourceWindow, matchableTexts: texts, unreadEstimate: unreadEstimate, metaEstimate: metaEstimate, rowElement: row)
+        }
+        return nil
+    }
+
+    private func findDirectTableRows(in window: AXElement) throws -> [AXElement]? {
+        let children = try window.children()
+        if let scrollArea = children.first(where: { (try? $0.role()) == AXRoleNames.scrollArea }),
+           let table = try scrollArea.children().first(where: {
+               let role = (try? $0.role()) ?? ""
+               return [AXRoleNames.table, AXRoleNames.outline, AXRoleNames.list].contains(role)
+           }) {
+            let rows = (try? table.elementsAttribute(AXAttributeNames.rows)) ?? []
+            if !rows.isEmpty { return rows }
+            let visible = (try? table.elementsAttribute(AXAttributeNames.visibleRows)) ?? []
+            if !visible.isEmpty { return visible }
         }
         return nil
     }
@@ -289,6 +343,25 @@ final class KakaoTalkSearchUI {
             buttonTitles: Array(Set(buttonTitles)).sorted(),
             path: rowNode.path
         )
+    }
+
+    private func quickRowTexts(from element: AXElement) -> [String] {
+        var texts: [String] = []
+        func collect(_ current: AXElement, depth: Int) {
+            if depth > 2 { return }
+            if let title = try? current.title(), !title.isEmpty {
+                texts.append(title)
+            }
+            if let value = try? current.valueAsString(), !value.isEmpty {
+                texts.append(value)
+            }
+            let nextChildren = (try? current.children()) ?? []
+            for child in nextChildren {
+                collect(child, depth: depth + 1)
+            }
+        }
+        collect(element, depth: 0)
+        return texts
     }
 
     private func directTexts(from element: AXElement, depth: Int = 0) throws -> [String] {

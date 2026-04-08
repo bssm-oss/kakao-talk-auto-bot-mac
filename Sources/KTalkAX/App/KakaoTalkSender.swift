@@ -215,27 +215,57 @@ final class KakaoTalkSender {
         let launchMs = Int(Date().timeIntervalSince(t0) * 1000)
         let existingOpenChatWindow = try? windows.chatWindow(appElement: prepared.appElement, expectedTitle: requestedChat.isEmpty ? searchQuery : requestedChat)
         let listWindow = try windows.primaryListWindow(appElement: prepared.appElement)
-        let searchStarted = Date()
+        let selected: ScoredChatCandidate
+        let matchedRow: ChatRowCandidate?
+        let searchMs: Int
         var storedSearch: StoredAXPath?
-        let (resultContainer, storedList) = try searchUI.findResultsContainer(in: listWindow.element, cache: cache, noCache: options.noCache)
-        if let (searchField, resolvedPath) = try? searchUI.findSearchField(in: listWindow.element, cache: cache, noCache: options.noCache) {
-            storedSearch = resolvedPath
-            try searchUI.clearAndTypeSearch(searchQuery, field: searchField)
-            Timeout.sleep(for: options.speed, base: 0.3)
+        var resultContainer: AXElement?
+        if let existingOpenChatWindow,
+           options.chatID != nil || (!requestedChat.isEmpty && TextNormalizer.normalize(existingOpenChatWindow.title) == TextNormalizer.normalize(requestedChat)) {
+            logger.trace("Skipping list search because the requested chat is already open.")
+            selected = ScoredChatCandidate(
+                chatID: registryEntry?.chatID ?? "chat_open_\(UUID().uuidString.prefix(8))",
+                title: existingOpenChatWindow.title,
+                score: 120,
+                matchType: "already_open",
+                sourceWindow: existingOpenChatWindow.title,
+                matchableTexts: [existingOpenChatWindow.title],
+                unreadEstimate: nil,
+                metaEstimate: nil
+            )
+            matchedRow = nil
+            searchMs = 0
         } else {
-            logger.trace("Search field not found; falling back to matching against the currently visible chat rows.")
-        }
-        let rows = try searchUI.collectRows(in: resultContainer, sourceWindow: listWindow.title, registry: registry)
-        let selected = try matcher.match(query: searchQuery, rows: rows, mode: options.matchMode, preferredChatID: options.chatID, registry: registry)
-        let searchMs = Int(Date().timeIntervalSince(searchStarted) * 1000)
-
-        guard let matchedRow = rows.first(where: { $0.chatID == selected.chatID }) else {
-            throw KTalkAXError.chatNotFound("선택한 채팅 행이 사라져서 채팅방을 열 수 없습니다.")
-        }
-
-        if !options.noCache {
-            try cache.updateSearchField(storedSearch)
-            try cache.updateResultList(storedList)
+            let searchStarted = Date()
+            let rows: [ChatRowCandidate]
+            if let foundResultContainerAndPath = try? searchUI.findResultsContainer(in: listWindow.element, cache: cache, noCache: options.noCache) {
+                resultContainer = foundResultContainerAndPath.0
+                let storedList = foundResultContainerAndPath.1
+                if let (searchField, resolvedPath) = try? searchUI.findSearchField(in: listWindow.element, cache: cache, noCache: options.noCache) {
+                    storedSearch = resolvedPath
+                    try searchUI.clearAndTypeSearch(searchQuery, field: searchField)
+                    Timeout.sleep(for: options.speed, base: 0.18)
+                    rows = try searchUI.collectRows(in: resultContainer!, sourceWindow: listWindow.title, registry: registry)
+                } else {
+                    logger.trace("Search field not found; trying fast direct exact-match row lookup first.")
+                    if options.matchMode == .exact, let direct = try searchUI.findDirectRowCandidate(named: searchQuery, in: listWindow.element, sourceWindow: listWindow.title, registry: registry) {
+                        rows = [direct]
+                    } else {
+                        logger.trace("Direct exact-match lookup failed; falling back to matching against the currently visible chat rows.")
+                        rows = try searchUI.collectRows(in: resultContainer!, sourceWindow: listWindow.title, registry: registry)
+                    }
+                }
+                if !options.noCache {
+                    try cache.updateSearchField(storedSearch)
+                    try cache.updateResultList(storedList)
+                }
+            } else {
+                logger.trace("Results container not found; falling back to direct row collection from the list window.")
+                rows = try searchUI.collectRowsInWindow(listWindow.element, sourceWindow: listWindow.title, registry: registry)
+            }
+            selected = try matcher.match(query: searchQuery, rows: rows, mode: options.matchMode, preferredChatID: options.chatID, registry: registry)
+            matchedRow = rows.first(where: { $0.chatID == selected.chatID })
+            searchMs = Int(Date().timeIntervalSince(searchStarted) * 1000)
         }
 
         let openStarted = Date()
@@ -246,15 +276,16 @@ final class KakaoTalkSender {
             chatWindow = existingOpenChatWindow
         } else {
             let resolveCurrentRow: () throws -> ChatRowCandidate = { [self] in
-                let refreshedRows = try self.searchUI.collectRows(in: resultContainer, sourceWindow: listWindow.title, registry: self.registry)
-                if let exact = refreshedRows.first(where: { $0.chatID == matchedRow.chatID }) {
+                let refreshedRows = try self.searchUI.collectRows(in: resultContainer!, sourceWindow: listWindow.title, registry: self.registry)
+                if let matchedRow, let exact = refreshedRows.first(where: { $0.chatID == matchedRow.chatID }) {
                     return exact
                 }
-                if let titled = refreshedRows.first(where: { $0.title == matchedRow.title }) {
+                if let matchedRow, let titled = refreshedRows.first(where: { $0.title == matchedRow.title }) {
                     return titled
                 }
                 logger.trace("Matched row could not be re-resolved; falling back to the original row element.")
-                return matchedRow
+                if let matchedRow { return matchedRow }
+                throw KTalkAXError.chatNotFound("선택한 채팅 행을 다시 찾지 못했습니다.")
             }
             let attemptOpen: () throws -> Void = { [self] in
                 try self.launcher.activate(prepared.app)
@@ -296,10 +327,9 @@ final class KakaoTalkSender {
         let shouldCloseWindow = !options.keepWindow
         let composeStarted = Date()
         let (composeField, composePath) = try composer.findComposeField(in: chatWindow.element, cache: cache, noCache: options.noCache)
-        let (sendButton, sendPath) = try composer.findSendButton(near: composeField, in: chatWindow.element, cache: cache, noCache: options.noCache)
         if !options.noCache {
             try cache.updateComposeField(composePath)
-            try cache.updateSendButton(sendPath)
+            try cache.updateSendButton(nil)
         }
 
         if options.confirm {
@@ -336,18 +366,27 @@ final class KakaoTalkSender {
 
         let sendStarted = Date()
         var usedFallbacks = composeFallbacks
-        usedFallbacks.append(contentsOf: try composer.sendMessage(button: sendButton, speed: options.speed))
+        usedFallbacks.append(contentsOf: try composer.sendMessage(button: nil, speed: options.speed))
         let sendMs = Int(Date().timeIntervalSince(sendStarted) * 1000)
 
         let verifyStarted = Date()
-        let verified = try verifySend(message: options.message, composeField: composeField, chatWindow: chatWindow.element)
+        var verified = try verifySend(message: options.message, composeField: composeField, chatWindow: chatWindow.element)
+        if !verified {
+            let composeValueAfterButton = try composeField.valueAsString() ?? ""
+            if TextNormalizer.normalize(composeValueAfterButton) == TextNormalizer.normalize(options.message) {
+                logger.trace("Button-based send did not clear the compose field; retrying with Enter fallback.")
+                usedFallbacks.append("enter-retry")
+                _ = try composer.sendMessage(button: nil, speed: options.speed)
+                verified = try verifySend(message: options.message, composeField: composeField, chatWindow: chatWindow.element)
+            }
+        }
         let verifyMs = Int(Date().timeIntervalSince(verifyStarted) * 1000)
 
         guard verified else {
             throw KTalkAXError.verificationFailed("입력창 또는 대화 행을 기준으로 메시지 전송을 검증하지 못했습니다.")
         }
 
-        _ = try registry.upsert(title: selected.title, matchableTexts: matchedRow.matchableTexts, preferredChatID: selected.chatID)
+        _ = try registry.upsert(title: selected.title, matchableTexts: matchedRow?.matchableTexts ?? [selected.title], preferredChatID: selected.chatID)
         if shouldCloseWindow {
             try? windows.close(window: chatWindow.element)
         }
@@ -373,10 +412,10 @@ final class KakaoTalkSender {
         if composeValue.isEmpty {
             return true
         }
-        let transcript = try searchUI.transcriptRows(in: chatWindow)
-        if transcript.suffix(5).contains(where: { row in
-            row.bodyCandidates.contains(where: { TextNormalizer.normalize($0) == TextNormalizer.normalize(message) })
-        }) {
+        if let transcript = try? searchUI.transcriptRows(in: chatWindow),
+           transcript.suffix(5).contains(where: { row in
+               row.bodyCandidates.contains(where: { TextNormalizer.normalize($0) == TextNormalizer.normalize(message) })
+           }) {
             return true
         }
         let normalizedCompose = TextNormalizer.normalize(composeValue)
