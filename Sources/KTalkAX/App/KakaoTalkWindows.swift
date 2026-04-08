@@ -19,7 +19,9 @@ final class KakaoTalkWindows {
 
     func descriptors(appElement: AXElement) throws -> [WindowDescriptor] {
         var uniqueWindows = try appElement.windows()
-        if let focused = try appElement.focusedWindow(), !uniqueWindows.contains(focused) {
+        if let focused = try appElement.focusedWindow(),
+           (try? focused.role()) == AXRoleNames.window,
+           !uniqueWindows.contains(focused) {
             uniqueWindows.append(focused)
         }
 
@@ -37,7 +39,13 @@ final class KakaoTalkWindows {
                 return frame.midY > windowFrame.midY
             }
             let hasRows = nodes.contains { $0.role == AXRoleNames.row }
-            let isListWindow = hasRows && (hasTopEditable || !hasBottomEditable)
+            let hasRowContainerEvidence = nodes.contains { node in
+                guard [AXRoleNames.table, AXRoleNames.outline, AXRoleNames.list, AXRoleNames.scrollArea, AXRoleNames.group].contains(node.role ?? "") else { return false }
+                if let rows = try? node.element.elementsAttribute(AXAttributeNames.rows), !rows.isEmpty { return true }
+                if let rows = try? node.element.elementsAttribute(AXAttributeNames.visibleRows), !rows.isEmpty { return true }
+                return false
+            }
+            let isListWindow = (hasRows || hasRowContainerEvidence) && (hasTopEditable || !hasBottomEditable)
             let descriptor = WindowDescriptor(
                 index: index,
                 element: window,
@@ -53,6 +61,9 @@ final class KakaoTalkWindows {
 
     func primaryListWindow(appElement: AXElement) throws -> WindowDescriptor {
         let descriptors = try descriptors(appElement: appElement)
+        if descriptors.isEmpty {
+            throw KTalkAXError.invalidUI("카카오톡 메인 목록 창이 닫혀 있습니다. Dock 또는 메뉴 막대에서 카카오톡 창을 먼저 열어 주세요.")
+        }
         if let focused = try appElement.focusedWindow(),
            let match = descriptors.first(where: { $0.element == focused && $0.isListWindow }) {
             return match

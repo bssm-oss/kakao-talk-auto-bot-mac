@@ -96,8 +96,9 @@ struct AXElement: Hashable {
     }
 
     func frame() throws -> CGRect? {
-        guard let positionValue: AXValue = try attribute(AXAttributeNames.position),
-              let sizeValue: AXValue = try attribute(AXAttributeNames.size) else {
+        let positionValue: AXValue? = try? attribute(AXAttributeNames.position)
+        let sizeValue: AXValue? = try? attribute(AXAttributeNames.size)
+        guard let positionValue, let sizeValue else {
             return nil
         }
         var point = CGPoint.zero

@@ -54,7 +54,11 @@ final class KakaoTalkLauncher {
             try fallback.run()
             fallback.waitUntilExit()
             try activate(running)
-            try waitForWindowReadiness(element: element)
+            do {
+                try waitForWindowReadiness(element: element)
+            } catch {
+                throw KTalkAXError.invalidUI("카카오톡 메인 창이 닫혀 있습니다. 카카오톡 메인 창을 먼저 연 뒤 다시 시도하세요.")
+            }
         }
         try assertLikelyLoggedIn(appElement: element)
         return AppPreparation(app: running, appElement: element, permission: permission)
