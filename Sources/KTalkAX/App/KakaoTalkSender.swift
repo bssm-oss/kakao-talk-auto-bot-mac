@@ -214,6 +214,11 @@ final class KakaoTalkSender {
         let prepared = try launcher.prepare(promptForTrust: false)
         let launchMs = Int(Date().timeIntervalSince(t0) * 1000)
         let existingOpenChatWindow = try? windows.chatWindow(appElement: prepared.appElement, expectedTitle: requestedChat.isEmpty ? searchQuery : requestedChat)
+        let currentWindows = try windows.descriptors(appElement: prepared.appElement)
+        for descriptor in currentWindows where descriptor.isChatWindow && TextNormalizer.normalize(descriptor.title) != TextNormalizer.normalize(requestedChat.isEmpty ? searchQuery : requestedChat) {
+            logger.trace("Closing non-target chat window before opening requested chat: \(descriptor.title)")
+            try? windows.close(window: descriptor.element)
+        }
         let listWindow = try windows.primaryListWindow(appElement: prepared.appElement)
         let selected: ScoredChatCandidate
         let matchedRow: ChatRowCandidate?
@@ -311,15 +316,32 @@ final class KakaoTalkSender {
                     try windows.chatWindow(appElement: prepared.appElement, expectedTitle: selected.title)
                 }
             } catch {
-                logger.trace("First chat-window verification failed; retrying row open once more.")
+                logger.trace("First chat-window verification failed; retrying row open with multiple visible-row candidates.")
                 try recovery.performRecoverySteps(launcher: launcher, currentApp: prepared.app, cache: cache, refreshCache: true, deepRecovery: options.deepRecovery)
                 try launcher.activate(prepared.app)
                 let currentListWindow = try windows.primaryListWindow(appElement: prepared.appElement)
-                try searchUI.openVisibleRow(named: selected.title, in: currentListWindow.element)
-                Timeout.sleep(for: options.speed, base: 0.45)
-                chatWindow = try Timeout.poll(label: "opened chat window", timeout: 8.0, interval: 0.4) {
-                    try windows.chatWindow(appElement: prepared.appElement, expectedTitle: selected.title)
+                let candidateRows = try searchUI.findVisibleRowsMatching(named: selected.title, in: currentListWindow.element)
+                guard !candidateRows.isEmpty else {
+                    throw KTalkAXError.chatNotFound("현재 보이는 목록에서 '\(selected.title)' 후보 행을 찾지 못했습니다.")
                 }
+                var foundChatWindow: WindowDescriptor?
+                for row in candidateRows {
+                    try searchUI.openRow(row)
+                    Timeout.sleep(for: options.speed, base: 0.35)
+                    if let opened = try? windows.chatWindow(appElement: prepared.appElement, expectedTitle: selected.title) {
+                        foundChatWindow = opened
+                        break
+                    }
+                    if let wrongOpen = try? windows.descriptors(appElement: prepared.appElement).first(where: { $0.isChatWindow && TextNormalizer.normalize($0.title) != TextNormalizer.normalize(selected.title) }) {
+                        logger.trace("Closing wrong chat window candidate: \(wrongOpen.title)")
+                        try? windows.close(window: wrongOpen.element)
+                        Timeout.sleep(for: options.speed, base: 0.2)
+                    }
+                }
+                guard let foundChatWindow else {
+                    throw KTalkAXError.invalidUI("현재 보이는 후보 행들로는 '\(selected.title)' 채팅창을 열지 못했습니다.")
+                }
+                chatWindow = foundChatWindow
             }
         }
         let openMs = Int(Date().timeIntervalSince(openStarted) * 1000)

@@ -28,11 +28,33 @@ final class KakaoTalkSearchUI {
             guard let frame = node.frame, let windowFrame = try? window.frame() else { return true }
             return frame.midY < windowFrame.midY
         }
-        let bestNode = candidates.first ?? recursiveSearchField(from: window, depth: 0)
+        var bestNode = candidates.first ?? recursiveSearchField(from: window, depth: 0)
+        if bestNode == nil {
+            try revealSearchFieldIfNeeded(in: window)
+            let retriedNodes = try AXTraversal.collect(root: window, strategy: .breadthFirst, maxDepth: 5, maxNodes: 350)
+            let retriedCandidates = retriedNodes.filter { node in
+                guard let role = node.role, role == AXRoleNames.textField || role == AXRoleNames.textArea else { return false }
+                guard let frame = node.frame, let windowFrame = try? window.frame() else { return true }
+                return frame.midY < windowFrame.midY
+            }
+            bestNode = retriedCandidates.first ?? recursiveSearchField(from: window, depth: 0)
+        }
         guard let best = bestNode else {
             throw KTalkAXError.invalidUI("검색 입력창을 찾지 못했습니다. 현재 AX 트리를 확인하려면 inspect를 실행하세요.")
         }
         return (best.element, StoredAXPath(path: best.path, segments: KakaoTalkCache.capture(node: best).segments, capturedAt: Date()))
+    }
+
+    private func revealSearchFieldIfNeeded(in window: AXElement) throws {
+        let children = try window.children()
+        if children.indices.contains(4) {
+            let candidate = children[4]
+            if (try? candidate.role()) == AXRoleNames.button, (try? candidate.actionNames().contains(AXActionNames.press)) == true {
+                logger.trace("Trying to reveal hidden search field via top toolbar button")
+                try AXActions.press(candidate)
+                Thread.sleep(forTimeInterval: 0.3)
+            }
+        }
     }
 
     private func recursiveSearchField(from element: AXElement, depth: Int) -> AXTraversalNode? {
@@ -222,14 +244,31 @@ final class KakaoTalkSearchUI {
         let normalizedExpected = TextNormalizer.normalize(title)
         let scrollArea = try window.children().first(where: { (try? $0.role()) == AXRoleNames.scrollArea })
         let table = try scrollArea?.children().first(where: { (try? $0.role()) == AXRoleNames.table || (try? $0.role()) == AXRoleNames.outline || (try? $0.role()) == AXRoleNames.list })
-        let rows = (try? table?.elementsAttribute(AXAttributeNames.rows)) ?? []
+        let rows = (try? table?.elementsAttribute(AXAttributeNames.visibleRows)) ?? (try? table?.elementsAttribute(AXAttributeNames.rows)) ?? []
         for row in rows {
             let texts = try directTexts(from: row)
-            if texts.contains(where: { TextNormalizer.normalize($0) == normalizedExpected }) {
+            guard let candidateTitle = texts.first(where: TextNormalizer.likelyHumanReadable) else { continue }
+            let normalizedTitle = TextNormalizer.normalize(candidateTitle)
+            let strippedTitle = TextNormalizer.normalize(candidateTitle, stripSeparators: true)
+            if normalizedTitle == normalizedExpected || strippedTitle == TextNormalizer.normalize(title, stripSeparators: true) {
                 return row
             }
         }
         return nil
+    }
+
+    func findVisibleRowsMatching(named title: String, in window: AXElement) throws -> [AXElement] {
+        let normalizedExpected = TextNormalizer.normalize(title)
+        let strippedExpected = TextNormalizer.normalize(title, stripSeparators: true)
+        let rows = try findDirectTableRows(in: window) ?? []
+        return try rows.filter { row in
+            let texts = try directTexts(from: row)
+            return texts.contains { text in
+                let normalized = TextNormalizer.normalize(text)
+                let stripped = TextNormalizer.normalize(text, stripSeparators: true)
+                return normalized == normalizedExpected || stripped == strippedExpected
+            }
+        }
     }
 
     func findDirectRowCandidate(named title: String, in window: AXElement, sourceWindow: String, registry: KakaoTalkRegistry) throws -> ChatRowCandidate? {
@@ -239,12 +278,9 @@ final class KakaoTalkSearchUI {
         for row in rows {
             let texts = quickRowTexts(from: row)
             guard let candidateTitle = texts.first(where: TextNormalizer.likelyHumanReadable) else { continue }
-            let matches = texts.contains { text in
-                let normalized = TextNormalizer.normalize(text)
-                let stripped = TextNormalizer.normalize(text, stripSeparators: true)
-                return normalized == normalizedExpected || stripped == strippedExpected
-            }
-            guard matches else { continue }
+            let normalizedTitle = TextNormalizer.normalize(candidateTitle)
+            let strippedTitle = TextNormalizer.normalize(candidateTitle, stripSeparators: true)
+            guard normalizedTitle == normalizedExpected || strippedTitle == strippedExpected else { continue }
             let existing = registry.entries().first { $0.title == candidateTitle && $0.lastMatchedTexts == texts }
             let chatID = existing?.chatID ?? "chat_\(UUID().uuidString.prefix(8))"
             let unreadEstimate = texts.compactMap(Int.init).first
@@ -261,10 +297,10 @@ final class KakaoTalkSearchUI {
                let role = (try? $0.role()) ?? ""
                return [AXRoleNames.table, AXRoleNames.outline, AXRoleNames.list].contains(role)
            }) {
-            let rows = (try? table.elementsAttribute(AXAttributeNames.rows)) ?? []
-            if !rows.isEmpty { return rows }
             let visible = (try? table.elementsAttribute(AXAttributeNames.visibleRows)) ?? []
             if !visible.isEmpty { return visible }
+            let rows = (try? table.elementsAttribute(AXAttributeNames.rows)) ?? []
+            if !rows.isEmpty { return rows }
         }
         return nil
     }
